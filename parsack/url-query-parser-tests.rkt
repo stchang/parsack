@@ -1,0 +1,17 @@
+#lang racket
+(require "parser-with-errors.rkt"
+         "url-query-parser.rkt"
+         "test-utils-with-errors.rkt")
+(require rackunit)
+(require (for-syntax syntax/parse))
+
+(define-syntax (check-query-parse stx)
+  (syntax-parse stx
+  [(_ p (~seq x y) ...)
+   #'(match p
+       [(Consumed (Ok consumed _ _))
+        (check-equal? consumed 
+                      (list (cons (string->list x) (string->list y)) ...))])]))
+                   
+(check-query-parse (parse p_query "foo=bar&a%21=b+c")
+                   "foo" "bar" "a!" "b c")
