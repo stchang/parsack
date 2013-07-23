@@ -8,12 +8,6 @@
 (define $remainingCells (<or> (>> (char #\,) $cells)
                              (return null)))
 
-;; tests for csv-parser-sepBy-with-errors.rkt
-;; (this file is entirely duplicated from csv-parser-with-error-tests.rkt,
-;;  except for the require)
-
-
-
 (check-parsing ($cellContent "abc") "abc" "")
 (check-parsing ($cellContent "abc\n") "abc" "\n")
 (check-parsing ($cellContent "abc,") "abc" ",")
@@ -54,7 +48,7 @@
                      ("Shirt, \"O'Reilly\" version" "20")
                      ("Haskell Caps" "15") "")
 
-;; all RWH tests
+;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
 (check-partial-parse-error ($csv "hi")
                            "parse-error: at pos 2\nunexpected end of input: expected \",\" or end-of-line")

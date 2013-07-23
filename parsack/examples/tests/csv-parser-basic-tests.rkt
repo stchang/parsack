@@ -43,15 +43,7 @@
                      ("\"Shirt" " \"\"O'Reilly\"\" version\"" "20")
                      ("\"Haskell Caps\"" "15") "")
 
-#;(check-line-parsings (csvFile "csv-example")
-                     ("\"Product\"" "\"Price\"")
-                     ("\"O'Reilly Socks\"" "10")
-                     ("\"Shirt with \"\"Haskell\"\" text\"" "20")
-                     ("\"Shirt" " \"\"O'Reilly\"\" version\"" "20")
-                     ("\"Haskell Caps\"" "15") "")
-
-
-;; all RWH tests
+;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
 (check-partial-parse-error 
  ($csv "hi") 
