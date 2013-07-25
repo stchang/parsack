@@ -186,9 +186,10 @@
 ;; parse with p 1 or more times
 (define (many1 p)
 ;  (>>= p (λ (x) (>>= (<or> (many1 p) (return null)) (λ (xs) (return (cons x xs))))))
-  (parser-compose (x  <- p)
+  #;(parser-compose (x  <- p)
                   (xs <- (<or> (many1 p) (return null)))
-                  (return (cons x xs))))
+                  (return (cons x xs)))
+  (parser-cons p (<or> (many1 p) (return null))))
 
 (define (skipMany p) (<or> (parser-compose p (skipMany p)) (return null)))
 (define (skipMany1 p) (parser-compose p (skipMany p)))
@@ -196,25 +197,29 @@
 ;; applies parser p zero or more times until parser end succeeds
 (define (manyTill p end)
   (<or> (>> end (return null))
-        (parser-compose (x <- p)
+        #;(parser-compose (x <- p)
                         (xs <- (manyTill p end))
-                        (return (cons x xs)))))
+                        (return (cons x xs)))
+        (parser-cons p (manyTill p end))))
 
 (define (sepBy1 p sep)
   ;(>>= p (λ (x) (>>= (many (>>= sep (λ _ p))) (λ (xs) (return (cons x xs))))))
-  (parser-compose (x  <- p)
+  #;(parser-compose (x  <- p)
                   (xs <- (many (>>= sep (λ _ p))))
-                  (return (cons x xs))))
+                  (return (cons x xs)))
+  (parser-cons p (many (>> sep p))))
 (define (sepBy p sep) (<or> (sepBy1 p sep) (return null)))
 
 (define (endBy p end) 
-  (many (parser-compose (x <- p) end (return x))))
+  (many #;(parser-compose (x <- p) end (return x))
+        (parser-one (~> p) end)))
 ;  ;(<or> 
 ;   (many (>>= p (λ (x) (>>= end (λ _ (return x)))))))
 ;   ;(return null)))
 
 (define (between open close p)
-  (parser-compose open (x <- p) close (return x)))
+  #;(parser-compose open (x <- p) close (return x))
+  (parser-one open (~> p) close))
    
 
 (define (<?> p exp)
@@ -287,10 +292,10 @@
      #'(>>= p (λ (x) (parser-compose e ...)))]
     [(_ q e ...) #'(>>= q (λ (x) (parser-compose e ...)))]))
 
-(define-for-syntax (add-bind stx)
-  (syntax-parse stx #:datum-literals (~)
-    [(~ p) #'p]
-    [q #`(#,(generate-temporary) <- q)]))
+;(define-for-syntax (add-bind stx)
+;  (syntax-parse stx #:datum-literals (~)
+;    [(~ p) #'p]
+;    [q #`(#,(generate-temporary) <- q)]))
 (define-syntax (parser-seq stx)
   (define (add-bind stx)
     (syntax-parse stx #:datum-literals (~)
@@ -298,7 +303,7 @@
       [q #`(#,(generate-temporary) <- q)]))
   (syntax-parse stx #:datum-literals (~)
     [(_ p:expr ...
-        (~optional (~seq #:combine-with combine) #:defaults ([combine #'list])))
+        (~optional (~seq #:combine-with combine:expr) #:defaults ([combine #'list])))
      (with-syntax ([(new-p ...) (map add-bind (syntax->list #'(p ...)))])
        (syntax-parse #'(new-p ...) #:datum-literals (<-)
          [(~and ((~or (x <- q1) q2) ...)
@@ -309,6 +314,21 @@
 ;;(parse (parser-seq $letter $digit #:combine-with list) "a1")
 
 (define-syntax-rule (parser-cons x y) (parser-seq x y #:combine-with cons))
+;(define-syntax-rule (parser-one x ...) (parser-seq x ... #:combine-with (λ (y) y)))
+(define-syntax (parser-one stx)
+  (define (add-bind stx)
+    (syntax-parse stx #:datum-literals (~>)
+      [(~> p) #'p]
+      [q #`(~ q)]))
+  (syntax-parse stx #:datum-literals (~>)
+    [(_ (~and (~seq (~or (~once (~> q1:expr) 
+                                #:name "return parse (wrapped with ~>)"
+                                #:too-many "too many parses to return (wrapped with ~>)"
+                                #:too-few "missing return parse (wrapped with ~>)") 
+                         (~not (~> q2:expr))) ...)
+              (~seq p:expr ...)))
+     (with-syntax ([(new-p ...) (map add-bind (syntax->list #'(p ...)))])
+       #'(parser-seq new-p ... #:combine-with (λ (x) x)))]))
 
 (define (choice ps) (apply <or> ps))
     

@@ -8,8 +8,12 @@
   (<or> (noneOf "\"")
         (try (>> (string "\"\"") (return #\")))))
 
-(define $quotedCell
-  (parser-compose
+(define $quotedCell 
+  (parser-one 
+   (char #\")
+   (~> (many $quotedChar))
+   (<?> (char #\") "quote at end of cell"))
+  #;(parser-compose
    (char #\")
    (content <- (many $quotedChar))
    (<?> (char #\") "quote at end of cell")

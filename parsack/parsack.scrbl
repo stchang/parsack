@@ -33,7 +33,7 @@ Parsec implementation in Racket. See @cite["parsec"].
   Monadic bind operator. Creates a parser that first parses with @racket[p], passes the result to @racket[f], then parses with the result of applying @racket[f]. If @racket[p] succeeds and consumes input, the application of @racket[f] is delayed. This avoids space leaks (see @cite["parsec"]).}
 
 @defproc[(>> [p parser?] [q parser?]) parser?]{
-  Creates a parser that first parses with @racket[p], ignores the result, then parses with @racket[q]. If @racket[p] consumes input, then parsing with @racket[q] is delayed.}
+  Creates a parser that first parses with @racket[p], ignores the result, then parses with @racket[q]. If @racket[p] consumes input, then parsing with @racket[q] is delayed. Equivalent to @racket[(>>= p (λ (x) q))] where @racket[x] is not bound in @racket[q].}
 
 @defproc[(return [x any/c]) parser?]{
   Creates a parser that consumes no input and returns @racket[x].}

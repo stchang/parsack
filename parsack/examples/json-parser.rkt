@@ -49,7 +49,7 @@
         (Empty (Error (Msg 0 "number" null))))))
 
 (define $p_bool (<or> (>> (string "true") (return #t))
-                     (>> (string "false") (return #f))))
+                      (>> (string "false") (return #f))))
 
 (define (<$> f p)
   (parser-compose
@@ -75,13 +75,10 @@
    (return (cons (list->string k) v))))
 
 (define (p_series left p right)
-  (between (parser-compose
-            (x <- (char left))
-            $spaces
-            (return x))
+  (between (parser-one (~> (char left)) $spaces)
            (char right)
-           (sepBy (parser-compose (x <- p) $spaces (return x))
-                  (parser-compose (x <- (char #\,)) $spaces (return x)))))
+           (sepBy (parser-one (~> p) $spaces)
+                  (parser-one (~> (char #\,)) $spaces))))
 
 (define $p_array (p_series #\[ $p_value #\]))
 (define $p_object (p_series #\{ $p_field #\}))
@@ -95,10 +92,5 @@
          (return (JArray vs)))))
 
 ;; parses json
-(define $p_text 
-  (<?> (parser-compose
-        $spaces
-        (x <- $text)
-        (return x))
-       "JSON text"))
+(define $p_text (<?> (parser-one $spaces (~> $text)) "JSON text"))
    

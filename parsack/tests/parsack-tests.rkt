@@ -63,3 +63,9 @@
 (check-parsing ((many $letter) "a") "a" "")
 (check-parsing ((many $letter) "aa") "aa" "")
 (check-parsing ((many $letter) "abc") "abc" "")
+
+(check-parsing ((parser-one (~> $letter) $digit) "a1") "a" "")
+;(parse (parser-one (~> $letter) (~> $digit)) "a1")
+; error: too many parses
+;(parse (parser-one $letter $digit) "a1")
+; error: too few parses

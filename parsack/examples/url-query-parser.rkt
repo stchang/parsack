@@ -49,10 +49,7 @@
                       (>> (char #\+) (return #\space))
                       $p_hex))
 
-(define $p_pair
-  (parser-compose
-   (name <- (many1 $p_char))
-   (val  <- (optionMaybe (>> (char #\=) (many $p_char))))
-   (return (cons name val))))
+(define $p_pair (parser-cons (many1 $p_char)
+                             (optionMaybe (>> (char #\=) (many $p_char)))))
          
 (define $p_query (sepBy $p_pair (char #\&)))

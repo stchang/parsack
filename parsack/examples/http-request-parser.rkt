@@ -12,17 +12,21 @@
         $digit
         (oneOf "-_")))
 
-(define $fieldName
-  (parser-compose
-   (x  <- $letter)
-   (xs <- (many $fieldChar))
-   (return (list->string (cons x xs)))))
+(define-syntax-rule (http-parser-cons x y)
+  (parser-seq x y #:combine-with (compose list->string cons)))
 
-(define $continuation
-  (parser-compose
-   (x <- (>> (many1 (oneOf " \t")) (return #\space)))
-   (xs <- $contents)
-   (return (cons x xs))))
+(define $fieldName (http-parser-cons $letter (many $fieldChar))
+  #;(parser-compose
+     (x  <- $letter)
+     (xs <- (many $fieldChar))
+     (return (list->string (cons x xs)))))
+
+(define $continuation 
+  (parser-cons (>> (many1 (oneOf " \t")) (return #\space)) $contents)
+  #;(parser-compose
+     (x <- (>> (many1 (oneOf " \t")) (return #\space)))
+     (xs <- $contents)
+     (return (cons x xs))))
 
 (define $notEOL (noneOf "\r\n"))
 (define $crlf
@@ -30,13 +34,17 @@
         (>> $newline (return null))))
 
 (define $contents
-  (parser-compose
-   (xs <- (parser-compose (x <- (many1 $notEOL)) $crlf (return x)))
-   (ys <- (<or> $continuation (return null)))
-   (return (list->string (append xs ys)))))
+  (parser-seq
+   (parser-one (~> (many1 $notEOL)) $crlf)
+   (<or> $continuation (return null))
+   #:combine-with (compose list->string append))
+  #;(parser-compose
+     (xs <- (parser-one (~> (many1 $notEOL)) $crlf))
+     (ys <- (<or> $continuation (return null)))
+     (return (list->string (append xs ys)))))
 
-(define $header
-  (parser-compose
+(define $header (parser-cons $fieldName (parser-compose (char #\:) $spaces $contents))
+  #;(parser-compose
    (x <- $fieldName)
    (y <- (parser-compose (char #\:) $spaces $contents))
    (return (cons x y))))
@@ -44,18 +52,22 @@
 (define $p_headers (manyTill $header $crlf))
   
 (define $url
-  (parser-compose
+  (parser-one
    (optional (char #\/))
-   (x <- (manyTill $notEOL (try (parser-compose (x <- (string " HTTP/1."))
-                                               (oneOf "01") (return x)))))
-   $crlf
-   (return x)))
+   (~> (manyTill $notEOL (try (parser-one (~> (string " HTTP/1.")) (oneOf "01")))))
+   $crlf)
+  #;(parser-compose
+     (optional (char #\/))
+     (x <- (manyTill $notEOL (try (parser-compose (x <- (string " HTTP/1."))
+                                                  (oneOf "01") (return x)))))
+     $crlf
+     (return x)))
 (define (q name ctor body)
   (parser-compose
    (m <- (parser-compose
-             (string name)
-             (char #\space)
-             (return ctor)))
+          (string name)
+          (char #\space)
+          (return ctor)))
    (u <- $url)
    (hs <- $p_headers)
    (b <- body)

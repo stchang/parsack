@@ -4,7 +4,8 @@
 (require (rename-in "../csv-parser-sepBy.rkt" [$cell $cellContent] [$line $cells]))
 (require rackunit)
 
-(define $line (>>= $cells (λ (res) (>> $eol (return res)))))
+(define $line (parser-one (~> $cells) $eol)
+  #;(>>= $cells (λ (res) (>> $eol (return res)))))
 (define $remainingCells (<or> (>> (char #\,) $cells)
                              (return null)))
 
