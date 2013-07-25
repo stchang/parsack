@@ -177,9 +177,10 @@
 (define (many p)
   (<or> 
    ;(>>= p (λ (x) (>>= (many p) (λ (xs) (return (cons x xs))))))
-   (parser-compose (x  <- p)
+   #;(parser-compose (x  <- p)
                    (xs <- (many p))
                    (return (cons x xs)))
+   (parser-cons p (many p))
    (return null)))
 
 ;; parse with p 1 or more times
@@ -297,7 +298,7 @@
       [q #`(#,(generate-temporary) <- q)]))
   (syntax-parse stx #:datum-literals (~)
     [(_ p:expr ...
-        (~optional (~seq #:combine-with combine) #:defaults ([combine #'cons])))
+        (~optional (~seq #:combine-with combine) #:defaults ([combine #'list])))
      (with-syntax ([(new-p ...) (map add-bind (syntax->list #'(p ...)))])
        (syntax-parse #'(new-p ...) #:datum-literals (<-)
          [(~and ((~or (x <- q1) q2) ...)
@@ -306,6 +307,8 @@
           #'(parser-compose q ... (return (combine x ...)))]))]))
 ;;(parse (parser-seq $letter $digit) "a1")
 ;;(parse (parser-seq $letter $digit #:combine-with list) "a1")
+
+(define-syntax-rule (parser-cons x y) (parser-seq x y #:combine-with cons))
 
 (define (choice ps) (apply <or> ps))
     

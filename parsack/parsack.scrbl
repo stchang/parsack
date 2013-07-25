@@ -27,10 +27,10 @@ Parsec implementation in Racket. See @cite["parsec"].
               ([bind-or-skip parser (x <- parser)]
                [parser parser?]
                [x identifier?])]{
-  Composes parsers. Syntactic wrapper for @racket[>>] operator.}
+  Composes parsers. Syntactic wrapper for @racket[>>=] operator.}
 
 @defproc[(>>= [p parser?] [f (-> any/c parser?)]) parser?]{
-  Creates a parser that first parses with @racket[p], passes the result to @racket[f], then parses with the result of applying @racket[f]. If @racket[p] succeeds and consumes input, the application of @racket[f] is delayed. This avoids space leaks (see @cite["parsec"]).}
+  Monadic bind operator. Creates a parser that first parses with @racket[p], passes the result to @racket[f], then parses with the result of applying @racket[f]. If @racket[p] succeeds and consumes input, the application of @racket[f] is delayed. This avoids space leaks (see @cite["parsec"]).}
 
 @defproc[(>> [p parser?] [q parser?]) parser?]{
   Creates a parser that first parses with @racket[p], ignores the result, then parses with @racket[q]. If @racket[p] consumes input, then parsing with @racket[q] is delayed.}

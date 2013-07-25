@@ -58,3 +58,8 @@
 (check-parsing ((>> $eol $eof) "\n") "" "")
 (check-parsing ((>> $eol $eof) "\r\n") "" "")
 (check-parsing ((>> $eol $eof) "\r") "" "")
+
+(check-empty-parsing ((many $letter) "") "")
+(check-parsing ((many $letter) "a") "a" "")
+(check-parsing ((many $letter) "aa") "aa" "")
+(check-parsing ((many $letter) "abc") "abc" "")
