@@ -1,5 +1,6 @@
 #lang racket
 (require "string-helpers.rkt")
+(require (for-syntax syntax/parse racket/syntax))
 (provide (all-defined-out))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Parsec (with error messages) ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -284,6 +285,27 @@
     [(_ (x <- p) e ...)
      #'(>>= p (λ (x) (parser-compose e ...)))]
     [(_ q e ...) #'(>>= q (λ (x) (parser-compose e ...)))]))
+
+(define-for-syntax (add-bind stx)
+  (syntax-parse stx #:datum-literals (~)
+    [(~ p) #'p]
+    [q #`(#,(generate-temporary) <- q)]))
+(define-syntax (parser-seq stx)
+  (define (add-bind stx)
+    (syntax-parse stx #:datum-literals (~)
+      [(~ p) #'p]
+      [q #`(#,(generate-temporary) <- q)]))
+  (syntax-parse stx #:datum-literals (~)
+    [(_ p:expr ...
+        (~optional (~seq #:combine-with combine) #:defaults ([combine #'cons])))
+     (with-syntax ([(new-p ...) (map add-bind (syntax->list #'(p ...)))])
+       (syntax-parse #'(new-p ...) #:datum-literals (<-)
+         [(~and ((~or (x <- q1) q2) ...)
+                (q ...))
+          ;(printf "~a\n" (syntax->datum #'(q2 ...))) ; uncomment for debugging
+          #'(parser-compose q ... (return (combine x ...)))]))]))
+;;(parse (parser-seq $letter $digit) "a1")
+;;(parse (parser-seq $letter $digit #:combine-with list) "a1")
 
 (define (choice ps) (apply <or> ps))
     
