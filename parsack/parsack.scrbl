@@ -8,7 +8,7 @@
 @(define the-eval (make-base-eval))
 @(the-eval '(require "parsack.rkt"))
 
-@defmodule[parsack]
+@defmodule[parsack #:use-sources ("parsack.rkt")]
 
 @author[@author+email["Stephen Chang" "stchang@racket-lang.org"]]
 
