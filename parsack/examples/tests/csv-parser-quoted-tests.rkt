@@ -3,6 +3,7 @@
 (require "../../tests/test-utils.rkt")
 (require (rename-in "../csv-parser-quoted.rkt" [$cell $cellContent] [$line $cells]))
 (require rackunit)
+(require racket/runtime-path)
 
 (define $line (parser-one (~> $cells) $eol)
   #;(>>= $cells (λ (res) (>> $eol (return res)))))
@@ -42,7 +43,8 @@
 (check-line-parsings ($csv "\"This, is, one, big, cell\"\n") ("This, is, one, big, cell") "")
 
 ;; csv example from RWH: http://book.realworldhaskell.org/read/using-parsec.html
-(check-line-parsings ($csv (with-input-from-file "csv-example" port->string))
+(define-runtime-path csv-example "csv-example")
+(check-line-parsings ($csv (with-input-from-file csv-example port->string))
                      ("Product" "Price")
                      ("O'Reilly Socks" "10")
                      ("Shirt with \"Haskell\" text" "20")
