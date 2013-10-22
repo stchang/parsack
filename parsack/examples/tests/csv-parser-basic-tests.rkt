@@ -3,6 +3,7 @@
 (require "../../tests/test-utils.rkt")
 (require "../csv-parser-basic.rkt")
 (require rackunit)
+(require racket/runtime-path)
 
 (check-parsing ($cellContent "abc") "abc" "")
 (check-parsing ($cellContent "abc\n") "abc" "\n")
@@ -36,7 +37,8 @@
 (check-line-parsings ($csv "abc,def\nghi,jkl\n") ("abc" "def") ("ghi" "jkl") "")
 
 ;; csv example from RWH: http://book.realworldhaskell.org/read/using-parsec.html
-(check-line-parsings ($csv (with-input-from-file "csv-example" port->string))
+(define-runtime-path csv-example "csv-example")
+(check-line-parsings ($csv (with-input-from-file csv-example port->string))
                      ("\"Product\"" "\"Price\"")
                      ("\"O'Reilly Socks\"" "10")
                      ("\"Shirt with \"\"Haskell\"\" text\"" "20")
