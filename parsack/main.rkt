@@ -1,3 +1,3 @@
 #lang racket
 (require "parsack.rkt")
-(provide (all-defined-out))
+(provide (all-from-out "parsack.rkt"))
