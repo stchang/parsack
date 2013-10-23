@@ -11,10 +11,10 @@
 (check-empty-parsing ($cellContent "\n") "\n")
 (check-empty-parsing ($cellContent ",") ",")
 
-(check-parse-error ((>> (char #\,) $cellContent) "abc")
-                   "parse-error: at pos 0\nunexpected a: expected \",\"")
-(check-parse-error ((>> (char #\,) $cellContent) "\nabc")
-                   "parse-error: at pos 0\nunexpected \n: expected \",\"")
+(check-parse-error 
+ ((>> (char #\,) $cellContent) "abc") (fmt-err-msg 0 "a" (list ",")))
+(check-parse-error 
+ ((>> (char #\,) $cellContent) "\nabc") (fmt-err-msg 0 "\n" (list ",")))
 (check-parsing ((>> (char #\,) $cellContent) ",abc") "abc" "")
 
 (check-empty-parsing ($remainingCells "abc") "abc")
@@ -26,14 +26,12 @@
 (check-parsings ($cells "abc,,ghi") "abc" "" "ghi" "")
 
 (check-parsings ($line "abc,def\nghi") "abc" "def" "ghi")
-(check-partial-parse-error 
- ($line "abc")
- "parse-error: at pos 3\nunexpected end of input: expected \",\" or end-of-line")
+(check-partial-parse-error
+ ($line "abc") (fmt-err-msg 3 "end of input" (list "," "end-of-line")))
 
 (check-empty-parsing ($csv "") "")
-(check-partial-parse-error
- ($csv "abc") 
- "parse-error: at pos 3\nunexpected end of input: expected \",\" or end-of-line")
+(check-partial-parse-error 
+ ($csv "abc") (fmt-err-msg 3 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "abc,def\nghi,jkl\n") ("abc" "def") ("ghi" "jkl") "")
 
 ;; csv example from RWH: http://book.realworldhaskell.org/read/using-parsec.html
@@ -48,8 +46,7 @@
 ;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
 (check-partial-parse-error 
- ($csv "hi") 
- "parse-error: at pos 2\nunexpected end of input: expected \",\" or end-of-line")
+ ($csv "hi") (fmt-err-msg 2 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "hi\n") ("hi") "")
 (check-line-parsings ($csv "line1\nline2\nline3\n") ("line1") ("line2") ("line3") "")
 (check-line-parsings ($csv "cell1,cell2,cell3\n") ("cell1" "cell2" "cell3") "")
@@ -59,5 +56,5 @@
                      ("line1") ("line2") ("line3") ("line4") ("line5") "")
 
 (check-parse-error
- ($csv "line1")
- "parse-error: at pos 5\nunexpected end of input: expected \",\" or end-of-line")
+ ($csv "line1") (fmt-err-msg 5 "end of input" (list "," "end-of-line")))
+ 

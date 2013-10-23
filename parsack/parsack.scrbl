@@ -6,9 +6,9 @@
 @title{Parsec implementation in Racket}
 
 @(define the-eval (make-base-eval))
-@(the-eval '(require "parsack.rkt"))
+@(the-eval '(require parsack))
 
-@defmodule[parsack #:use-sources ("parsack.rkt")]
+@defmodule[parsack #:use-sources (parsack)]
 
 @author[@author+email["Stephen Chang" "stchang@racket-lang.org"]]
 
@@ -87,6 +87,10 @@ Parsec implementation in Racket. See @cite["parsec"].
   Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
 @defproc[(between [open parser?][close parser?][p parser?]) parser?]{
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
+@defproc[(lookAhead [p parser?]) parser?]{
+  Creates a parser that parses with @racket[p] but consumes no input.}
+@defproc[(<!> [p parser?]) parser?]{
+  Creates a parser that errors if @racket[p] successfully parses input, but otherwise consumes no input.}
 
 @;; ---------------------------------------------------------------------------
 @section{Character parsing}

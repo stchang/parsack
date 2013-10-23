@@ -40,7 +40,8 @@
 (struct Ok (parsed rest msg) #:transparent)
 (struct Error (msg) #:transparent)
 
-(define $err (λ (input) (Error (Msg 0 "" null))))
+(define $err 
+  (match-lambda [(State inp pos) (Empty (Error (Msg pos inp null)))]))
 
 ;; creates a parser that consumes no input and returns x
 (define (return x)
@@ -68,14 +69,13 @@
         #f
         (or (char=? c (str-fst s))
             (char=any c (str-rst s)))))
-  (define (str->strs)
-    (format-exp (map (λ (x) (string-append "\"" (mk-string x) "\"")) (string->list str))))
+  (define (str->strs) (format-exp (map mk-string (string->list str))))
   (λ (state)
     (match ((satisfy (λ (c) (not (char=any c str)))) state)
       [(Consumed! (Error (Msg pos inp exp)))
-       (Consumed (Error (Msg pos inp (cons (string-append "none of " (str->strs)) exp))))]
+       (Consumed (Error (Msg pos inp (cons (string-append "none of: " (str->strs)) exp))))]
       [(Empty (Error (Msg pos inp exp)))
-       (Empty (Error (Msg pos inp (cons (string-append "none of " (str->strs))
+       (Empty (Error (Msg pos inp (cons (string-append "none of: " (str->strs))
                                         exp))))]
       [ok ok])))
 
@@ -90,9 +90,9 @@
   (λ (state)
     (match ((satisfy (λ (c) (char=any c str))) state)
       [(Consumed! (Error (Msg pos inp exp)))
-       (Consumed (Error (Msg pos inp (cons (string-append "one of " (str->strs)) exp))))]
+       (Consumed (Error (Msg pos inp (cons (string-append "one of: " (str->strs)) exp))))]
       [(Empty (Error (Msg pos inp exp)))
-       (Empty (Error (Msg pos inp (cons (string-append "one of " (str->strs)) exp))))]
+       (Empty (Error (Msg pos inp (cons (string-append "one of: " (str->strs)) exp))))]
       [ok ok])))
        
 
@@ -164,12 +164,28 @@
   (<or> (>> p (return null))
         (return null)))
 
-;; lookahead
+;; tries to parse with p but backtracks and does not consume input if error
 (define (try p)
   (λ (state)
     (match (p state)
       [(Consumed! (Error msg)) (Empty (Error msg))]
       [other other])))
+
+;; parse with p but never consume input
+(define (lookAhead p)
+  (match-lambda
+    [(and input (State inp pos))
+     (match (p input)
+       [(Consumed! (Ok x _ (Msg _ str strs))) (Empty (Ok x input (Msg pos inp strs)))]
+       [emp emp])]))
+
+(define (<!> p)
+  (match-lambda
+    [(and input (State inp pos))
+     (match (p input)
+       [(Consumed! (Ok x state msg)) 
+        (Empty (Error (Msg pos inp (list (string-append "not: " inp)))))]
+       [_ (Empty (Ok null input (Msg pos inp null)))])]))
 
 
 
@@ -233,7 +249,7 @@
     [(Msg pos inp _) (Msg pos inp (list exp))]))
 
 ;; creates a parser that parses char c
-(define (char c) (<?> (satisfy (curry char=? c)) (string-append "\"" (mk-string c) "\"")))
+(define (char c) (<?> (satisfy (curry char=? c)) (mk-string c)))
 (define $letter (<?> (satisfy char-alphabetic?) "letter"))
 (define $digit (<?> (satisfy char-numeric?) "digit"))
 (define $hexDigit (<?> (<or> $digit
@@ -272,15 +288,17 @@
 (define $identifier (<?> (many1 (<or> $letter $digit (char #\_))) "identifier"))
 
 (define (format-exp exp) (string-join exp ", " #:before-last " or "))
+
+;; errors have to be printed ~s, otherwise newlines get messed up
 (define (parse p inp) 
   (match (p (State inp 0))
     [(Empty (Error (Msg pos msg exp)))
      (error 'parse-error 
-            "at pos ~a\nunexpected ~a: expected ~a" 
+            "at pos ~a\nunexpected: ~s\n  expected: ~s" 
             pos msg (format-exp exp))]
     [(Consumed! (Error (Msg pos msg exp)))
      (error 'parse-error 
-            "at pos ~a\nunexpected ~a: expected ~a" 
+            "at pos ~a\nunexpected: ~s\n  expected: ~s" 
             pos msg (format-exp exp))]
     [x x]))
   

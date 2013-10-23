@@ -53,3 +53,9 @@
      (check-true true)]))
 
 (define-syntax-rule (do-parse (p inp)) (parse p inp))
+
+(define (fmt-err-msg pos str strs #:extra [extra #f]) 
+  (define tmp (if extra
+                  (string-append extra ": " (format-exp strs)) 
+                  (format-exp strs)))
+  (format "parse-error: at pos ~a\nunexpected: ~s\n  expected: ~s" pos str tmp))
