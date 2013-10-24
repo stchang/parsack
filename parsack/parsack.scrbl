@@ -1,14 +1,15 @@
 #lang scribble/manual
 @(require scribble/eval
-          (for-label parsack
+          (for-label "parsack.rkt"
+                     racket/contract/base
                      (rename-in racket/base [string mk-string])))
 
 @title{Parsec implementation in Racket}
 
 @(define the-eval (make-base-eval))
-@(the-eval '(require parsack))
+@(the-eval '(require "parsack.rkt"))
 
-@defmodule[parsack #:use-sources (parsack)]
+@defmodule[parsack #:use-sources ("parsack.rkt")]
 
 @author[@author+email["Stephen Chang" "stchang@racket-lang.org"]]
 
@@ -135,7 +136,7 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 
 A @deftech{parser} is a function that consumes a @racket[State] and returns either an error, or a @racket[Consumed], or an @racket[Empty].
 
-@defstruct*[State ([str string?] [pos number?])]{
+@defstruct*[State ([str string?] [pos exact-nonnegative-integer?])]{
   Input to a parser. Consists of an input string and a position.}
 
 @defstruct*[Consumed ([reply (or/c Ok? Error?)])]{
@@ -149,7 +150,10 @@ A @deftech{parser} is a function that consumes a @racket[State] and returns eith
 
 @defstruct*[Error ([msg Msg?])]{
   Indicates parse error.}
-                                                        
+                                
+@defstruct*[Msg ([pos exact-nonnegative-integer?][unexpected string?][expected (listof string?)])]{
+  Indicates parse error.}
+
 @(bibliography
   (bib-entry #:key "parsec"
              #:author "Daan Leijen and Erik Meijer"
