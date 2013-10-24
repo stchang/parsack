@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require scribble/eval
-          (for-label "parsack.rkt"
+          (for-label parsack
                      (rename-in racket/base [string mk-string])))
 
 @title{Parsec implementation in Racket}
