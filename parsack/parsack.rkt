@@ -350,4 +350,12 @@
 (define (choice ps) (apply <or> ps))
 
 
-    
+(define (notFollowedBy p)
+  (try (<or> (parser-compose (c <- (try p))
+                             (unexpected c))
+             (return null))))
+
+(define (unexpected v)
+  (match-lambda
+   [(and state (State inp pos))
+    (Empty (Error (Msg pos inp (list (format "not followed by: ~a" v)))))]))

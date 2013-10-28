@@ -75,3 +75,10 @@
 (check-parsing ((>> (<!> (string "A\n")) (<or> $letter $digit)) "BA") "B" "A")
 (check-parsing ((>> (<!> (string "A\n")) (<or> $letter $digit)) "1A") "1" "A")
  
+(check-parse-error ((parser-seq (char #\a) (notFollowedBy (char #\b))) "ab")
+                   (fmt-err-msg 1 "" (list "b") #:extra "not followed by"))
+(check-parsing ((parser-seq (char #\a) (~ (notFollowedBy (char #\b)))) "ac") "a" "c")
+
+(check-parse-error ((parser-seq (char #\a) (notFollowedBy (string "bc"))) "abc")
+                   (fmt-err-msg 1 "" (list "(b c)") #:extra "not followed by"))
+(check-parsing ((parser-seq (char #\a) (~ (notFollowedBy (string "bc")))) "abd") "a" "bd")

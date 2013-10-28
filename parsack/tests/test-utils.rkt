@@ -10,7 +10,7 @@
         res)))
 (define-syntax-rule (check-parsing e parsed rst)
   (match (force-Consumed e)
-    [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
+    [(Consumed (Ok consumed (State remaining pos) (Msg pos2 msg exp)))
      (if (list? consumed)
          (check-equal? consumed (string->list parsed))
          (check-equal? consumed (car (string->list parsed))))
@@ -34,11 +34,11 @@
   (syntax-rules ()
     [(_ e) (check-parse-error e "")]
     [(_ e msg)
-  (check-exn exn:fail? 
-    (thunk
-     (with-handlers ([exn:fail? (λ (x) (check-equal? (exn-message x) msg)
-                                  (raise x))])
-       (force-Consumed e))))]))
+     (check-exn exn:fail? 
+       (thunk
+        (with-handlers ([exn:fail? (λ (x) (check-equal? (exn-message x) msg)
+                                     (raise x))])
+          (force-Consumed e))))]))
 (define-syntax check-partial-parse-error
   (syntax-rules ()
     [(_ e) (check-partial-parse-error e "")]
@@ -54,6 +54,9 @@
 
 (define-syntax-rule (do-parse (p inp)) (parse p inp))
 
+;; FIXME:
+;; test seemingly passes when this is used with check-parse-error and
+;; strs is not a list -- because error handler is not fine-grain enough
 (define (fmt-err-msg pos str strs #:extra [extra #f]) 
   (define tmp (if extra
                   (string-append extra ": " (format-exp strs)) 
