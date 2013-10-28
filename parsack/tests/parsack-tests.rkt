@@ -37,7 +37,7 @@
 
 (check-empty-parsing ($eof "") "")
 (check-parse-error ($eof "a") (fmt-err-msg 0 "non-empty-input" "end-of-file"))
-(check-parsing ($eol "\n") "" "")
+(check-parsing ($eol "\n") "\n" "")
 (check-parse-error ($eol "a") (fmt-err-msg 0 "a" "end-of-line"))
 
 (check-parsing ((>> $eol $eof) "\n\r") "" "")

@@ -176,7 +176,7 @@
   (match-lambda
     [(and input (State inp pos))
      (match (p input)
-       [(Consumed! (Ok x _ (Msg _ str strs))) (Empty (Ok x input (Msg pos inp strs)))]
+       [(Consumed! (Ok _ _ (Msg _ str strs))) (Empty (Ok null input (Msg pos inp strs)))]
        [emp emp])]))
 
 (define (<!> p)
@@ -262,12 +262,11 @@
 (define $newline (<?> (char #\newline) "new-line"))
 (define $tab (<?> (char #\tab) "tab"))
 
-;; consumes given str, but does not return as parser result
+;; consumes and returns given string
 (define (string str)
   (if (str-empty? str)
       (return null)
-      ;(>>= (char (str-fst str)) (λ _ (string (str-rst str))))
-      (>> (char (str-fst str)) (string (str-rst str)))))
+      (parser-cons (char (str-fst str)) (string (str-rst str)))))
 
 ;; parser that only succeeds on empty input
 (define $eof
@@ -349,4 +348,6 @@
        #'(parser-seq new-p ... #:combine-with (λ (x) x)))]))
 
 (define (choice ps) (apply <or> ps))
+
+
     
