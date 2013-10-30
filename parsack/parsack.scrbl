@@ -90,8 +90,11 @@ Parsec implementation in Racket. See @cite["parsec"].
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
 @defproc[(lookAhead [p parser?]) parser?]{
   Creates a parser that parses with @racket[p] but consumes no input.}
-@defproc[(<!> [p parser?]) parser?]{
-  Creates a parser that errors if @racket[p] successfully parses input, but otherwise consumes no input.}
+@defproc[(<!> [p parser?] [q parser? $anyChar]) parser?]{
+  Similar to @racket[noneOf] but more general. Creates a parser that errors if @racket[p] successfully parses input, otherwise parses with @racket[q].
+  @racket[q] defaults to @racket[$anyChar] if unspecified.}
+@defproc[(notFollowedBy [p parser?]) parser?]{
+  Creates a parser that succeeds and return nothing if @racket[p] fails, and fails if @racket[p] succeeds. Does not consume input.}
 
 @;; ---------------------------------------------------------------------------
 @section{Character parsing}
@@ -120,7 +123,6 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @defthing[$eol parser?]{Parses end of line.}
 @defthing[$eof parser?]{Parses end of file.}
 @defthing[$identifier parser?]{Parsers string containing only numbers, letters, or underscore.}
-@defthing[$err parser?]{Parser that always returns error.}
 
 @;; ---------------------------------------------------------------------------
 @section{Error handling combinators}
@@ -131,6 +133,11 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @defproc[(<?> [p parser?] [expected string?]) parser?]{
   Creates a parser that tries to parser with @racket[p] and returns error msg @racket[expected] if it fails.}
 
+@defthing[$err parser?]{Parser that always returns error.}
+
+@defproc[(unexpected [expected any/c]) parser?]{ 
+  Like @racket[$err] but allows custom expected msg.}
+          
 @;; ---------------------------------------------------------------------------
 @section{Structs for Parsing}
 

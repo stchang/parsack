@@ -25,9 +25,12 @@
 (check-parsing ($letter "b") "b" "")
 (check-parsing ($letter "bc") "b" "c")
 (check-parsing ($letter "A1") "A" "1")
+(check-parsing ($alphaNum "A1") "A" "1")
 (check-parse-error ($letter "1") (fmt-err-msg 0 "1" "letter"))
 
 (check-parsing ($digit "1") "1" "")
+(check-parsing ($alphaNum "1") "1" "")
+(check-parse-error ($alphaNum "!") (fmt-err-msg 0 "!" (list "letter or digit")))
 
 (check-parse-error ((noneOf "a") "a") (fmt-err-msg 0 "a" (list "a") #:extra "none of"))
 (check-parsing ((noneOf "a") "b") "b" "")
@@ -56,7 +59,7 @@
 ;(parse (parser-one $letter $digit) "a1")
 ; error: too few parses
 
-(check-parse-error ($err "any") (fmt-err-msg 0 "any" ""))
+(check-parse-error ($err "any") (fmt-err-msg 0 "any" (list "")))
 (check-parse-error 
  ((>> (lookAhead $tab) (<or> $letter $digit)) "\t")
  (fmt-err-msg 0  "\t" (list "letter" "digit")))
@@ -65,15 +68,13 @@
  (fmt-err-msg 0  "A" (list "tab")))
 (check-empty-parsing ((lookAhead (string "A\n")) "A\n") "A\n")
 (check-parsing ((>> (lookAhead (string "A\n")) $letter) "A\n") "A" "\n")
-(check-parse-error 
- ((>> (<!> (string "A\n")) (<or> $letter $digit)) "A\n")
- (fmt-err-msg 0 "A\n" (list "A\n") #:extra "not"))
-(check-parse-error 
- ((>> (<!> (string "A\n")) (<or> $letter $digit)) "A\n\n")
- (fmt-err-msg 0 "A\n\n" (list "A\n\n") #:extra "not"))
-(check-parsing ((>> (<!> (string "A\n")) (<or> $letter $digit)) "AB") "A" "B")
-(check-parsing ((>> (<!> (string "A\n")) (<or> $letter $digit)) "BA") "B" "A")
-(check-parsing ((>> (<!> (string "A\n")) (<or> $letter $digit)) "1A") "1" "A")
+(check-parse-error ((<!> (string "A\n")) "A\n")
+                   (fmt-err-msg 2 "" (list "(A \n)") #:extra "not followed by"))
+(check-parse-error ((<!> (string "A\n"))"A\n\n")
+                   (fmt-err-msg 2 "" (list "(A \n)") #:extra "not followed by"))
+(check-parsing ((<!> (string "A\n")) "AB") "A" "B")
+(check-parsing ((<!> (string "A\n")) "BA") "B" "A")
+(check-parsing ((<!> (string "A\n")) "1A") "1" "A")
  
 (check-parse-error ((parser-seq (char #\a) (notFollowedBy (char #\b))) "ab")
                    (fmt-err-msg 1 "" (list "b") #:extra "not followed by"))
@@ -82,3 +83,7 @@
 (check-parse-error ((parser-seq (char #\a) (notFollowedBy (string "bc"))) "abc")
                    (fmt-err-msg 1 "" (list "(b c)") #:extra "not followed by"))
 (check-parsing ((parser-seq (char #\a) (~ (notFollowedBy (string "bc")))) "abd") "a" "bd")
+
+(check-parsing ((parser-one (~> (string "let")) (notFollowedBy $alphaNum)) "let ") "let" " ")
+(check-parse-error ((parser-one (~> (string "let")) (notFollowedBy $alphaNum)) "lets")
+                   (fmt-err-msg 3 "" "not followed by: s"))

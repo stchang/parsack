@@ -179,8 +179,9 @@
        [(Consumed! (Ok _ _ (Msg _ str strs))) (Empty (Ok null input (Msg pos inp strs)))]
        [emp emp])]))
 
-(define (<!> p)
-  (match-lambda
+(define (<!> p [q $anyChar])
+  (<or> (parser-compose (x <- (try p)) (unexpected x)) q)
+  #;(match-lambda
     [(and input (State inp pos))
      (match (p input)
        [(Consumed! (Ok x state msg)) 
@@ -252,6 +253,9 @@
 (define (char c) (<?> (satisfy (curry char=? c)) (mk-string c)))
 (define $letter (<?> (satisfy char-alphabetic?) "letter"))
 (define $digit (<?> (satisfy char-numeric?) "digit"))
+(define $alphaNum 
+  (<?> (satisfy (λ (c) (or (char-alphabetic? c) (char-numeric? c)))) 
+       "letter or digit"))
 (define $hexDigit (<?> (<or> $digit
                             (oneOf "abcdef")
                             (oneOf "ABCDEF"))
