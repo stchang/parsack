@@ -64,8 +64,8 @@ Parsec implementation in Racket. See @cite["parsec"].
 
 @defproc[(<or> [p parser?] ...) parser?]{
   Creates a parser that tries the given parses in order, returning with the first successful result.}
-@defproc[(choice [p parser?] ...) parser?]{
-  Same as @racket[<or>].}
+@defproc[(choice [ps (listof parser?)]) parser?]{
+  Same as @racket[(apply <or> ps)].}
 
 @;; ---------------------------------------------------------------------------
 @section{Other combinators}
