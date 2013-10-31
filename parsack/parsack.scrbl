@@ -114,6 +114,7 @@ Parsec implementation in Racket. See @cite["parsec"].
 This library uses the $ prefix for identifiers that represent parsers (as opposed to combinators).
 @defthing[$letter parser?]{Parses an alphabetic char.}
 @defthing[$digit parser?]{Parses an numeric char.}
+@defthing[$alphaNum parser?]{Parses a letter or digit.}
 @defthing[$hexDigit parser?]{Parses a hex char.}
 @defthing[$space parser?]{Parses a space.}
 @defthing[$spaces parser?]{Parses zero or more spaces.}
