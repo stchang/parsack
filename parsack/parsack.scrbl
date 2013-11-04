@@ -107,6 +107,8 @@ Parsec implementation in Racket. See @cite["parsec"].
   Creates a parser that consumes and returns one character if the character does not appear in @racket[str].}
 @defproc[(oneOf [str string?]) parser?]{
   Creates a parser that consumes and returns one character if the character appears in @racket[str].}
+@defproc[(oneOfStrings [str (listof string?)] ...) parser?]{
+  Creates a parser that consumes and returns any of the @racket[str]s.}
 @defproc[(string [str string?]) parser?]{
   Creates a parser that parses but does not return @racket[str].}
 
