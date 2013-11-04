@@ -86,7 +86,7 @@ Parsec implementation in Racket. See @cite["parsec"].
   Like @racket[sepBy] except for an extra @racket[end] at the end.}
 @defproc[(manyTill [p parser?][end parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
-@defproc[(manyTill [p parser?][end parser?]) parser?]{
+@defproc[(many1Till [p parser?][end parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] one or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
 @defproc[(between [open parser?][close parser?][p parser?]) parser?]{
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
@@ -109,7 +109,7 @@ Parsec implementation in Racket. See @cite["parsec"].
   Creates a parser that consumes and returns one character if the character does not appear in @racket[str].}
 @defproc[(oneOf [str string?]) parser?]{
   Creates a parser that consumes and returns one character if the character appears in @racket[str].}
-@defproc[(oneOfStrings [str (listof string?)] ...) parser?]{
+@defproc[(oneOfStrings [str string?] ...) parser?]{
   Creates a parser that consumes and returns any of the @racket[str]s.}
 @defproc[(string [str string?]) parser?]{
   Creates a parser that parses but does not return @racket[str].}
