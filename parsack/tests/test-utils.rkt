@@ -57,8 +57,14 @@
 ;; FIXME:
 ;; test seemingly passes when this is used with check-parse-error and
 ;; strs is not a list -- because error handler is not fine-grain enough
-(define (fmt-err-msg pos str strs #:extra [extra #f]) 
+;;
+;; Supply line, col, and pos as 1-based (as they appear in the errorw
+;; message).
+(define (fmt-err-msg line col pos str strs #:extra [extra #f])
   (define tmp (if extra
                   (string-append extra ": " (format-exp strs)) 
                   (format-exp strs)))
-  (format "parse-error: at pos ~a\nunexpected: ~s\n  expected: ~s" pos str tmp))
+  (format "parse-error: at ~a\nunexpected: ~s\n  expected: ~s"
+          (format-pos (Pos (sub1 pos) (sub1 line) (sub1 col)))
+          str
+          tmp))
