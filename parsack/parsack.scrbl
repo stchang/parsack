@@ -86,6 +86,8 @@ Parsec implementation in Racket. See @cite["parsec"].
   Like @racket[sepBy] except for an extra @racket[end] at the end.}
 @defproc[(manyTill [p parser?][end parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
+@defproc[(manyTill [p parser?][end parser?]) parser?]{
+  Creates a parser that repeatedly parses with @racket[p] one or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
 @defproc[(between [open parser?][close parser?][p parser?]) parser?]{
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
 @defproc[(lookAhead [p parser?]) parser?]{
