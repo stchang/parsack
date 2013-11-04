@@ -222,6 +222,12 @@
                         (return (cons x xs)))
         (parser-cons p (manyTill p end))))
 
+;; applies parser p one or more times until parser end succeeds
+(define (many1Till p end)
+  (parser-compose (x <- p)
+                  (xs <- (manyTill p end))
+                  (return (cons x xs))))
+
 (define (sepBy1 p sep)
   ;(>>= p (λ (x) (>>= (many (>>= sep (λ _ p))) (λ (xs) (return (cons x xs))))))
   #;(parser-compose (x  <- p)
