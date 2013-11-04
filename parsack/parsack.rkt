@@ -17,14 +17,13 @@
 ;; - parsers consume a State
 (struct State (str pos) #:transparent)
 ;; where str = input
-;;       pos = position
+;;       pos = Pos
 
 ;; A Message is a (Msg Pos String [List String])
 (struct Msg (pos str strs) #:transparent)
-;; where pos = position
+;; where pos = Pos
 ;;       str = unexpected input
 ;;       strs = possible expected inputs
-  
 
 ;; A [Consumed X] is one of:
 ;; - (Consumed [Reply X])
@@ -43,6 +42,22 @@
 (define $err 
   (match-lambda [(State inp pos) (Empty (Error (Msg pos inp null)))]))
 
+;; A Pos is a (Pos n line col)
+(struct Pos (n line col) #:transparent)
+(define parse-source (make-parameter #f)) ;; not in Pos for efficiency
+(define (start-pos)
+  (Pos 0 0 0))
+(define (incr-pos p c)
+  (match* (p c)
+    [((Pos n line col) #\newline) (Pos (add1 n) (add1 line) 0)]
+    [((Pos n line col) _        ) (Pos (add1 n) line (add1 col))]))
+(define (format-pos p)
+  (match* (p (parse-source))
+    [((Pos n line col) (? path-string? src))
+     (format "~a:~a:~a:~a" src (add1 line) (add1 col) (add1 n))]
+    [((Pos n line col) _)
+     (format "~a:~a:~a" (add1 line) (add1 col) (add1 n))]))
+
 ;; creates a parser that consumes no input and returns x
 (define (return x)
   (match-lambda 
@@ -52,16 +67,16 @@
 ;; creates a parser that consumes 1 char if it satisfies predicate p?
 (define (satisfy p?)
   (match-lambda 
-    [(State input pos)
-     (if (str-empty? input)
-         (Empty (Error (Msg pos "end of input" null)))
-         (let ([c (str-fst input)]
-               [cs (str-rst input)])
-           (if (p? c)
-               (let* ([new-pos (add1 pos)]
-                      [new-state (State cs new-pos)])
-                 (Consumed (Ok c new-state (Msg new-pos "" null))))
-               (Empty (Error (Msg pos (mk-string c) null #;(list "input satisfying given predicate")))))))]))
+   [(State input pos)
+    (if (str-empty? input)
+        (Empty (Error (Msg pos "end of input" null)))
+        (let ([c (str-fst input)]
+              [cs (str-rst input)])
+          (if (p? c)
+              (let* ([new-pos (incr-pos pos c)]
+                     [new-state (State cs new-pos)])
+                (Consumed (Ok c new-state (Msg new-pos "" null))))
+              (Empty (Error (Msg pos (mk-string c) null))))))]))
 
 (define (noneOf str)
   (define (char=any c s)
@@ -185,13 +200,11 @@
 (define (<!> p [q $anyChar])
   (<or> (parser-compose (x <- (try p)) (unexpected x)) q)
   #;(match-lambda
-    [(and input (State inp pos))
-     (match (p input)
-       [(Consumed! (Ok x state msg)) 
-        (Empty (Error (Msg pos inp (list (string-append "not: " inp)))))]
-       [_ (Empty (Ok null input (Msg pos inp null)))])]))
-
-
+   [(and input (State inp pos))
+    (match (p input)
+      [(Consumed! (Ok x state msg)) 
+       (Empty (Error (Msg pos inp (list (string-append "not: " inp)))))]
+      [_ (Empty (Ok null input (Msg pos inp null)))])]))
 
 ;; parse with p 0 or more times
 (define (many p)
@@ -303,15 +316,15 @@
 
 ;; errors have to be printed ~s, otherwise newlines get messed up
 (define (parse p inp) 
-  (match (p (State inp 0))
+  (match (p (State inp (start-pos)))
     [(Empty (Error (Msg pos msg exp)))
      (error 'parse-error 
-            "at pos ~a\nunexpected: ~s\n  expected: ~s" 
-            pos msg (format-exp exp))]
+            "at ~a\nunexpected: ~s\n  expected: ~s"
+            (format-pos pos) msg (format-exp exp))]
     [(Consumed! (Error (Msg pos msg exp)))
      (error 'parse-error 
-            "at pos ~a\nunexpected: ~s\n  expected: ~s" 
-            pos msg (format-exp exp))]
+            "at ~a\nunexpected: ~s\n  expected: ~s"
+            (format-pos pos) msg (format-exp exp))]
     [x x]))
   
 ;; parser compose
