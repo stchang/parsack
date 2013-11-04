@@ -34,6 +34,10 @@
 
 (define $p_string (between (char #\") (char #\") (many $jchar)))
 
+
+(define/match (pos+ p m)
+  [((Pos n ln col) m) (Pos (+ n m) ln (+ col m))])
+
 ;; uses Racket's read to read a datum
 ;; - if it's a number, return it
 ;; - if it's not a number, don't consume any input
@@ -45,7 +49,7 @@
     (define pos (file-position p))
     (define rst (port->string p))
     (if (number? n)
-        (Consumed (Ok n (State rst (+ (State-pos state) pos)) (Msg 0 "" null)))
+        (Consumed (Ok n (State rst (pos+ (State-pos state) pos)) (Msg 0 "" null)))
         (Empty (Error (Msg 0 "number" null))))))
 
 (define $p_bool (<or> (>> (string "true") (return #t))
