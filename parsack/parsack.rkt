@@ -95,8 +95,11 @@
        (Empty (Error (Msg pos inp (cons (string-append "one of: " (str->strs)) exp))))]
       [ok ok])))
        
-
-
+(define (oneOfStrings . ss)
+  (<?> (parser-compose (cs <- (choice (map (compose1 try string) ss)))
+                       (return (list->string cs)))
+       (string-append "one of: "
+                      (string-join (map ~s ss) ", "))))
 
 ;; creates a parser that combines two parsers p and f
 ;; - if p succeeds but does not consume input, then f determines result
