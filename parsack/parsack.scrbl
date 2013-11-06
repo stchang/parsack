@@ -148,7 +148,7 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 
 A @deftech{parser} is a function that consumes a @racket[State] and returns either an error, or a @racket[Consumed], or an @racket[Empty].
 
-@defstruct*[State ([str string?] [pos exact-nonnegative-integer?])]{
+@defstruct*[State ([str string?] [pos Pos?])]{
   Input to a parser. Consists of an input string and a position.}
 
 @defstruct*[Consumed ([reply (or/c Ok? Error?)])]{
@@ -163,8 +163,13 @@ A @deftech{parser} is a function that consumes a @racket[State] and returns eith
 @defstruct*[Error ([msg Msg?])]{
   Indicates parse error.}
                                 
-@defstruct*[Msg ([pos exact-nonnegative-integer?][unexpected string?][expected (listof string?)])]{
+@defstruct*[Msg ([pos Pos?][unexpected string?][expected (listof string?)])]{
   Indicates parse error.}
+
+@defstruct*[Pos ([pos exact-nonnegative-integer?]
+                 [ln (or/c exact-nonnegative-integer? #f)]
+                 [col (or/c exact-nonnegative-integer? #f)])]{
+  Position of parser, with line and column information if it's available.}
 
 @(bibliography
   (bib-entry #:key "parsec"
