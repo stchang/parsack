@@ -62,9 +62,8 @@
                    (fmt-err-msg 1 1 1 "b" (list "a" "b") #:extra "none of"))
 (check-parsing ((noneOf "ab") "c") "c" "")
 
-(check-empty-parsing ($eof "") "")
-(check-parse-error ($eof "a")
-                   (fmt-err-msg 1 1 1 "non-empty-input" "end-of-file"))
+(check-empty-parsing ($eof "") "" "")
+(check-parse-error ($eof "a") (fmt-err-msg 1 1 1 "non-empty-input" "end-of-file"))
 (check-parsing ($eol "\n") "\n" "")
 (check-parse-error ($eol "a")
                    (fmt-err-msg 1 1 1 "a" "end-of-line"))
@@ -74,7 +73,7 @@
 (check-parsing ((>> $eol $eof) "\r\n") "" "")
 (check-parsing ((>> $eol $eof) "\r") "" "")
 
-(check-empty-parsing ((many $letter) "") "")
+(check-empty-parsing ((many $letter) "") "" "")
 (check-parsing ((many $letter) "a") "a" "")
 (check-parsing ((many $letter) "aa") "aa" "")
 (check-parsing ((many $letter) "abc") "abc" "")
@@ -92,7 +91,7 @@
 (check-parse-error 
  ((>> (lookAhead $tab) (<or> $letter $digit)) "A")
  (fmt-err-msg 1 1 1 "A" (list "tab")))
-(check-empty-parsing ((lookAhead (string "A\n")) "A\n") "A\n")
+(check-empty-parsing ((lookAhead (string "A\n")) "A\n") "A\n" "A\n")
 (check-parsing ((>> (lookAhead (string "A\n")) $letter) "A\n") "A" "\n")
 (check-parse-error ((<!> (string "A\n")) "A\n")
                    (fmt-err-msg 2 1 3 "" (list "(A \n)") #:extra "not followed by"))
@@ -125,7 +124,6 @@
                    (fmt-err-msg 1 3 3 "" (list "e")))
 (check-parse-error ((many1Till (string "one") (string "two")) "ontwo")
                    (fmt-err-msg 1 3 3 "" (list "e")))
-
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar") "bar" "")
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar___") "bar" "___")
 (check-parse-error ((oneOfStrings "foo" "bar" "baz") "BAR")

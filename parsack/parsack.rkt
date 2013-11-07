@@ -186,12 +186,13 @@
       [(Consumed! (Error msg)) (Empty (Error msg))]
       [other other])))
 
-;; parse with p but never consume input
+;; Parse p and return the result, but don't consume input.
 (define (lookAhead p)
   (match-lambda
     [(and input (State inp pos))
      (match (p input)
-       [(Consumed! (Ok _ _ (Msg _ str strs))) (Empty (Ok null input (Msg pos inp strs)))]
+       [(Consumed! (Ok result _ (Msg _ str strs)))
+        (Empty (Ok result input (Msg pos inp strs)))]
        [emp emp])]))
 
 (define (<!> p [q $anyChar])
