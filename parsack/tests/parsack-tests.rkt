@@ -64,7 +64,7 @@
 
 (check-empty-parsing ($eof "") "")
 (check-parse-error ($eof "a")
-                   (fmt-err-msg 1 1 1 "non-empty-input" (list "end-of-file")))
+                   (fmt-err-msg 1 1 1 "non-empty input" (list "end-of-file")))
 (check-parsing ($eol "\n") "\n" "")
 (check-parse-error ($eol "a")
                    (fmt-err-msg 1 1 1 "a" (list "end-of-line")))
