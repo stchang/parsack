@@ -341,6 +341,11 @@
             (format-pos pos) msg (format-exp exp))]
     [x x]))
   
+(define (parse-result p s)
+  (match (parse p s)
+    [(Consumed! (Ok parsed _ _)) parsed]
+    [x (error 'parse-result (~v x))]))
+
 ;; parser compose
 (define-syntax (parser-compose stx)
   (syntax-case stx (<-)
