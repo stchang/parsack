@@ -19,7 +19,10 @@ Parsec implementation in Racket. See @cite["parsec"].
 @section{Basic parsing functions}
 
 @defproc[(parse [p parser?] [input string?]) (or/c Consumed? Empty?)]{
-  Parses input string @racket[input] with parser @racket[p] and returns the result}
+  Parses input string @racket[input] with parser @racket[p] and returns a complete @racket[Consumed] or @racket[Emtpy] struct describing the parse result, state, and message.}
+
+@defproc[(parse-result [p parser?] [input string?]) any/c]{
+  Parses input string @racket[input] with parser @racket[p] and returns only the the parse result.}
 
 @;; ---------------------------------------------------------------------------
 @section{Basic parsing combinators/forms}
