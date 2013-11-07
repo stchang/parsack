@@ -46,7 +46,7 @@
 (check-parsing ($letter "bc") "b" "c")
 (check-parsing ($letter "A1") "A" "1")
 (check-parsing ($alphaNum "A1") "A" "1")
-(check-parse-error ($letter "1") (fmt-err-msg 1 1 1 "1" "letter"))
+(check-parse-error ($letter "1") (fmt-err-msg 1 1 1 "1" (list "letter")))
 
 (check-parsing ($digit "1") "1" "")
 (check-parsing ($alphaNum "1") "1" "")
@@ -63,10 +63,11 @@
 (check-parsing ((noneOf "ab") "c") "c" "")
 
 (check-empty-parsing ($eof "") "")
-(check-parse-error ($eof "a") (fmt-err-msg 1 1 1 "non-empty-input" "end-of-file"))
+(check-parse-error ($eof "a")
+                   (fmt-err-msg 1 1 1 "non-empty-input" (list "end-of-file")))
 (check-parsing ($eol "\n") "\n" "")
 (check-parse-error ($eol "a")
-                   (fmt-err-msg 1 1 1 "a" "end-of-line"))
+                   (fmt-err-msg 1 1 1 "a" (list "end-of-line")))
 
 (check-parsing ((>> $eol $eof) "\n\r") "" "")
 (check-parsing ((>> $eol $eof) "\n") "" "")
@@ -111,7 +112,7 @@
 
 (check-parsing ((parser-one (~> (string "let")) (notFollowedBy $alphaNum)) "let ") "let" " ")
 (check-parse-error ((parser-one (~> (string "let")) (notFollowedBy $alphaNum)) "lets")
-                   (fmt-err-msg 1 1 3 "" "not followed by: s"))
+                   (fmt-err-msg 1 4 4 "" (list "not followed by: s")))
 ;; test manytill
 (check-parsing ((manyTill (string "one") (string "two")) "two") "" "")
 (check-parse-error ((many1Till (string "one") (string "two")) "two")
@@ -127,9 +128,9 @@
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar") "bar" "")
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar___") "bar" "___")
 (check-parse-error ((oneOfStrings "foo" "bar" "baz") "BAR")
-                   "parse-error: at 1:1:1\nunexpected: \"B\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")
+                   "parse ERROR: at 1:1:1\nunexpected: \"B\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")
 
 (check-parsing ((oneOfStringsAnyCase "foo" "bar" "baz") "BAR") "BAR" "")
 (check-parsing ((oneOfStringsAnyCase "foo" "bar" "baz") "BAR___") "BAR" "___")
 (check-parse-error ((oneOfStrings "foo" "bar" "baz") "XXX")
-                   "parse-error: at 1:1:1\nunexpected: \"X\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")
+                   "parse ERROR: at 1:1:1\nunexpected: \"X\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")

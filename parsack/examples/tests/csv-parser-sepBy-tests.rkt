@@ -17,9 +17,9 @@
 (check-empty-parsing ($cellContent ",") ",")
 
 (check-parse-error 
- ((>> (char #\,) $cellContent) "abc") (fmt-err-msg 0 "a" (list ",")))
+ ((>> (char #\,) $cellContent) "abc") (fmt-err-msg 1 1 1 "a" (list ",")))
 (check-parse-error
- ((>> (char #\,) $cellContent) "\nabc") (fmt-err-msg 0 "\n" (list ",")))
+ ((>> (char #\,) $cellContent) "\nabc") (fmt-err-msg 1 1 1 "\n" (list ",")))
 (check-parsing ((>> (char #\,) $cellContent) ",abc") "abc" "")
 
 (check-empty-parsing ($remainingCells "abc") "abc")
@@ -32,11 +32,11 @@
 
 (check-parsings ($line "abc,def\nghi") "abc" "def" "ghi")
 (check-partial-parse-error
- ($line "abc") (fmt-err-msg 3 "end of input" (list "," "end-of-line")))
+ ($line "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 
 (check-empty-parsing ($csv "") "")
 (check-partial-parse-error
- ($csv "abc") (fmt-err-msg 3 "end of input" (list "," "end-of-line")))
+ ($csv "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "abc,def\nghi,jkl\n") ("abc" "def") ("ghi" "jkl") "")
 
 ;; csv example from RWH: http://book.realworldhaskell.org/read/using-parsec.html
@@ -51,7 +51,7 @@
 ;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
 (check-partial-parse-error
- ($csv "hi") (fmt-err-msg 2 "end of input" (list "," "end-of-line")))
+ ($csv "hi") (fmt-err-msg 1 3 3 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "hi\n") ("hi") "")
 (check-line-parsings ($csv "line1\nline2\nline3\n") ("line1") ("line2") ("line3") "")
 (check-line-parsings ($csv "cell1,cell2,cell3\n") ("cell1" "cell2" "cell3") "")

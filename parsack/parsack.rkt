@@ -42,6 +42,12 @@
 (define $err 
   (match-lambda [(State inp pos) (Empty (Error (Msg pos inp null)))]))
 
+(struct exn:fail:parsack exn:fail ())
+
+(define-syntax-rule (parsack-error msg)
+  (raise (exn:fail:parsack (string-append "parse ERROR: " msg)
+                           (current-continuation-marks))))
+
 ;; A Pos is a (Pos ofs line col)
 (struct Pos (ofs line col) #:transparent)
 (define parse-source (make-parameter #f)) ;; not in Pos for efficiency
@@ -332,13 +338,11 @@
 (define (parse p inp) 
   (match (p (State inp (start-pos)))
     [(Empty (Error (Msg pos msg exp)))
-     (error 'parse-error 
-            "at ~a\nunexpected: ~s\n  expected: ~s"
-            (format-pos pos) msg (format-exp exp))]
+     (parsack-error (format "at ~a\nunexpected: ~s\n  expected: ~s"
+                            (format-pos pos) msg (format-exp exp)))]
     [(Consumed! (Error (Msg pos msg exp)))
-     (error 'parse-error 
-            "at ~a\nunexpected: ~s\n  expected: ~s"
-            (format-pos pos) msg (format-exp exp))]
+     (parsack-error (format "at ~a\nunexpected: ~s\n  expected: ~s"
+                            (format-pos pos) msg (format-exp exp)))]
     [x x]))
   
 (define (parse-result p s)

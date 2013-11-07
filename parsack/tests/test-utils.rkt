@@ -54,24 +54,26 @@
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-parse-error e ""))]
     [(_ e msg)
-     #`(check-exn exn:fail? 
+     (quasisyntax/loc stx
+       (check-exn exn:fail:parsack? 
          (thunk
           (with-handlers 
-            ([exn:fail? (λ (x) 
+            ([exn:fail:parsack? (λ (x) 
                           #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
                           (raise x))])
-            (force-Consumed e))))]))
+            (force-Consumed e)))))]))
 (define-syntax (check-partial-parse-error stx)
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-partial-parse-error e ""))]
     [(_ e msg)
-     #`(check-exn exn:fail? 
+     (quasisyntax/loc stx
+       (check-exn exn:fail:parsack? 
          (thunk
           (with-handlers 
-            ([exn:fail? (λ (x) 
-                          #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
-                          (raise x))])
-            (force-Consumed e))))]))
+            ([exn:fail:parsack? (λ (x) 
+                                  #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
+                                  (raise x))])
+            (force-Consumed e)))))]))
 
 (define-syntax-rule (do-parse (p inp)) (parse p inp))
 
@@ -85,7 +87,7 @@
   (define tmp (if extra
                   (string-append extra ": " (format-exp strs)) 
                   (format-exp strs)))
-  (format "parse-error: at ~a\nunexpected: ~s\n  expected: ~s"
+  (format "parse ERROR: at ~a\nunexpected: ~s\n  expected: ~s"
           (format-pos (Pos (sub1 pos) (sub1 line) (sub1 col)))
           str
           tmp))
