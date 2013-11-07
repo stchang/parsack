@@ -19,7 +19,27 @@
 
 (check-parsing ((char #\A) "A") "A" "")
 (check-parsing ((char #\A) "ABC") "A" "BC")
-(check-parse-error ((char #\A) "B") (fmt-err-msg 1 1 1 "B" (list "A")))
+(check-parse-error ((char #\A) "B")
+                   (fmt-err-msg 1 1 1 "B" (list "A")))
+
+(check-parsing ((charAnyCase #\A) "A") "A" "")
+(check-parsing ((charAnyCase #\A) "a") "a" "")
+(check-parse-error ((charAnyCase #\A) "Z")
+                   (fmt-err-msg 1 1 1 "Z" (list "A" "a")))
+
+(check-parsing ((string "ABC") "ABC") "ABC" "")
+(check-parsing ((string "ABC") "ABCxxx") "ABC" "xxx")
+(check-parse-error ((string "ABC") "xzy")
+                   (fmt-err-msg 1 1 1 "x" (list "A")))
+
+(check-parsing ((stringAnyCase "ABC") "ABC") "ABC" "")
+(check-parsing ((stringAnyCase "ABC") "abc") "abc" "")
+(check-parsing ((stringAnyCase "ABC") "ABC___") "ABC" "___")
+(check-parsing ((stringAnyCase "ABC") "abc___") "abc" "___")
+(check-parse-error ((stringAnyCase "ABC") "xzy")
+                   (fmt-err-msg 1 1 1 "x" (list "A" "a")))
+(check-parse-error ((stringAnyCase "ABC") "xzy")
+                   (fmt-err-msg 1 1 1 "x" (list "A" "a")))
 
 (check-parsing ($letter "A") "A" "")
 (check-parsing ($letter "b") "b" "")
@@ -30,18 +50,24 @@
 
 (check-parsing ($digit "1") "1" "")
 (check-parsing ($alphaNum "1") "1" "")
-(check-parse-error ($alphaNum "!") (fmt-err-msg 1 1 1 "!" (list "letter or digit")))
+(check-parse-error ($alphaNum "!")
+                   (fmt-err-msg 1 1 1 "!" (list "letter or digit")))
 
-(check-parse-error ((noneOf "a") "a") (fmt-err-msg 1 1 1 "a" (list "a") #:extra "none of"))
+(check-parse-error ((noneOf "a") "a")
+                   (fmt-err-msg 1 1 1 "a" (list "a") #:extra "none of"))
 (check-parsing ((noneOf "a") "b") "b" "")
-(check-parse-error ((noneOf "ab") "a") (fmt-err-msg 1 1 1 "a" (list "a" "b") #:extra "none of"))
-(check-parse-error ((noneOf "ab") "b") (fmt-err-msg 1 1 1 "b" (list "a" "b") #:extra "none of"))
+(check-parse-error ((noneOf "ab") "a")
+                   (fmt-err-msg 1 1 1 "a" (list "a" "b") #:extra "none of"))
+(check-parse-error ((noneOf "ab") "b")
+                   (fmt-err-msg 1 1 1 "b" (list "a" "b") #:extra "none of"))
 (check-parsing ((noneOf "ab") "c") "c" "")
 
 (check-empty-parsing ($eof "") "")
-(check-parse-error ($eof "a") (fmt-err-msg 1 1 1 "non-empty-input" "end-of-file"))
+(check-parse-error ($eof "a")
+                   (fmt-err-msg 1 1 1 "non-empty-input" "end-of-file"))
 (check-parsing ($eol "\n") "\n" "")
-(check-parse-error ($eol "a") (fmt-err-msg 1 1 1 "a" "end-of-line"))
+(check-parse-error ($eol "a")
+                   (fmt-err-msg 1 1 1 "a" "end-of-line"))
 
 (check-parsing ((>> $eol $eof) "\n\r") "" "")
 (check-parsing ((>> $eol $eof) "\n") "" "")
@@ -99,3 +125,13 @@
                    (fmt-err-msg 1 3 3 "" (list "e")))
 (check-parse-error ((many1Till (string "one") (string "two")) "ontwo")
                    (fmt-err-msg 1 3 3 "" (list "e")))
+
+(check-parsing ((oneOfStrings "foo" "bar" "baz") "bar") "bar" "")
+(check-parsing ((oneOfStrings "foo" "bar" "baz") "bar___") "bar" "___")
+(check-parse-error ((oneOfStrings "foo" "bar" "baz") "BAR")
+                   "parse-error: at 1:1:1\nunexpected: \"B\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")
+
+(check-parsing ((oneOfStringsAnyCase "foo" "bar" "baz") "BAR") "BAR" "")
+(check-parsing ((oneOfStringsAnyCase "foo" "bar" "baz") "BAR___") "BAR" "___")
+(check-parse-error ((oneOfStrings "foo" "bar" "baz") "XXX")
+                   "parse-error: at 1:1:1\nunexpected: \"X\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")
