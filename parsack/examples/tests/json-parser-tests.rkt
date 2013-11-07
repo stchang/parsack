@@ -4,10 +4,12 @@
 (require "../json-parser.rkt")
 (require rackunit)
 
-(define-syntax-rule (check-parse p n)
-  (match p
-    [(Consumed! (Ok consumed _ _))
-     (check-equal? consumed n)]))
+(define-syntax (check-parse stx)
+  (syntax-case stx ()
+    [(_ p n)
+     #`(match p
+         [(Consumed! (Ok consumed _ _))
+          #,(syntax/loc #'n (check-equal? consumed n))])]))
 
 (check-parse (parse $p_number "-3.14") -3.14)
 (check-parse (parse $p_bool "true") #t)

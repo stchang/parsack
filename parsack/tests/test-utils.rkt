@@ -8,54 +8,70 @@
     (if (Consumed? res)
         (struct-copy Consumed res [reply (force (Consumed-reply res))])
         res)))
-(define-syntax-rule (check-parsing e parsed rst)
-  (match (force-Consumed e)
-    [(Consumed (Ok consumed (State remaining pos) (Msg pos2 msg exp)))
-     (if (list? consumed)
-         (check-equal? consumed (string->list parsed))
-         (check-equal? consumed (car (string->list parsed))))
-     (check-equal? remaining rst)]))
-(define-syntax-rule (check-parsings e parsed ... rst)
-  (match (force-Consumed e)
-    [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
-     (check-equal? consumed (list (string->list parsed) ...))
-     (check-equal? remaining rst)]))
-(define-syntax-rule (check-line-parsings e (x ...) ... rst)
-  (match (force-Consumed e)
-    [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
-     (check-equal? consumed (list (list (string->list x) ...) ...))
-     (check-equal? remaining rst)]))
-(define-syntax check-empty-parsing
-  (syntax-rules ()
-    [(_ e rst) (check-empty-parsing e "" rst)]
+(define-syntax (check-parsing stx) 
+  (syntax-case stx ()
     [(_ e parsed rst)
-     (match (force-Consumed e)
-       [(Empty (Ok result (State remaining pos) (Msg pos msg exp)))
-        (if (list? result)
-            (check-equal? result (string->list parsed))
-            (check-equal? result (car (string->list parsed))))
-        (check-equal? remaining rst)])]))
-(define-syntax check-parse-error
-  (syntax-rules ()
-    [(_ e) (check-parse-error e "")]
+     #`(match (force-Consumed e)
+         [(Consumed (Ok consumed (State remaining pos) (Msg pos2 msg exp)))
+          (if (list? consumed) ; if not list, then it's a single char
+              #,(syntax/loc #'parsed 
+                  (check-equal? consumed (string->list parsed)))
+              (begin #,(syntax/loc #'parsed 
+                         (check-equal? (length (string->list parsed)) 1))
+                     #,(syntax/loc #'parsed
+                         (check-equal? consumed (car (string->list parsed))))))
+          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+(define-syntax (check-parsings stx)
+  (syntax-case stx ()
+    [(_ e parsed ... rst)
+     #`(match (force-Consumed e)
+         [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
+          #,(syntax/loc #'(parsed ...) 
+              (check-equal? consumed (list (string->list parsed) ...)))
+          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+(define-syntax (check-line-parsings stx)
+  (syntax-case stx ()
+    [(_ e (x ...) ... rst)
+     #`(match (force-Consumed e)
+         [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
+          #,(syntax/loc #'((x ...) ...) 
+              (check-equal? consumed (list (list (string->list x) ...) ...)))
+          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+(define-syntax (check-empty-parsing stx)
+  (syntax-case stx ()
+    [(_ e rst) (syntax/loc stx (check-empty-parsing e "" rst))]
+    [(_ e parsed rst)
+     #`(match (force-Consumed e)
+         [(Empty (Ok result (State remaining pos) (Msg pos msg exp)))
+          (if (list? result)
+              #,(syntax/loc #'parsed (check-equal? result (string->list parsed)))
+              (begin #,(syntax/loc #'parsed 
+                         (check-equal? (length (string->list parsed)) 1))
+                     #,(syntax/loc #'parsed 
+                         (check-equal? result (car (string->list parsed))))))
+          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+(define-syntax (check-parse-error stx)
+  (syntax-case stx ()
+    [(_ e) (syntax/loc stx (check-parse-error e ""))]
     [(_ e msg)
-     (check-exn exn:fail? 
-       (thunk
-        (with-handlers ([exn:fail? (λ (x) (check-equal? (exn-message x) msg)
-                                     (raise x))])
-          (force-Consumed e))))]))
-(define-syntax check-partial-parse-error
-  (syntax-rules ()
-    [(_ e) (check-partial-parse-error e "")]
+     #`(check-exn exn:fail? 
+         (thunk
+          (with-handlers 
+            ([exn:fail? (λ (x) 
+                          #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
+                          (raise x))])
+            (force-Consumed e))))]))
+(define-syntax (check-partial-parse-error stx)
+  (syntax-case stx ()
+    [(_ e) (syntax/loc stx (check-partial-parse-error e ""))]
     [(_ e msg)
-     (check-exn exn:fail? 
-       (thunk
-        (with-handlers ([exn:fail? (λ (x) (check-equal? (exn-message x) msg)
-                                     (raise x))])
-          (force-Consumed e))))])
-  #;(match (force-Consumed e)
-    [(Consumed (Error (Msg pos msg exp)))
-     (check-true true)]))
+     #`(check-exn exn:fail? 
+         (thunk
+          (with-handlers 
+            ([exn:fail? (λ (x) 
+                          #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
+                          (raise x))])
+            (force-Consumed e))))]))
 
 (define-syntax-rule (do-parse (p inp)) (parse p inp))
 
