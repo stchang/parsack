@@ -42,21 +42,21 @@
 (define $err 
   (match-lambda [(State inp pos) (Empty (Error (Msg pos inp null)))]))
 
-;; A Pos is a (Pos n line col)
-(struct Pos (n line col) #:transparent)
+;; A Pos is a (Pos ofs line col)
+(struct Pos (ofs line col) #:transparent)
 (define parse-source (make-parameter #f)) ;; not in Pos for efficiency
 (define (start-pos)
   (Pos 0 0 0))
 (define (incr-pos p c)
   (match* (p c)
-    [((Pos n line col) #\newline) (Pos (add1 n) (add1 line) 0)]
-    [((Pos n line col) _        ) (Pos (add1 n) line (add1 col))]))
+    [((Pos ofs line col) #\newline) (Pos (add1 ofs) (add1 line) 0)]
+    [((Pos ofs line col) _        ) (Pos (add1 ofs) line        (add1 col))]))
 (define (format-pos p)
   (match* (p (parse-source))
-    [((Pos n line col) (? path-string? src))
-     (format "~a:~a:~a:~a" src (add1 line) (add1 col) (add1 n))]
-    [((Pos n line col) _)
-     (format "~a:~a:~a" (add1 line) (add1 col) (add1 n))]))
+    [((Pos ofs line col) (? path-string? src))
+     (format "~a:~a:~a:~a" src (add1 line) (add1 col) (add1 ofs))]
+    [((Pos ofs line col) _)
+     (format "~a:~a:~a" (add1 line) (add1 col) (add1 ofs))]))
 
 ;; creates a parser that consumes no input and returns x
 (define (return x)
@@ -78,43 +78,40 @@
                 (Consumed (Ok c new-state (Msg new-pos "" null))))
               (Empty (Error (Msg pos (mk-string c) null))))))]))
 
-(define (noneOf str)
-  (define (char=any c s)
-    (if (str-empty? s)
-        #f
-        (or (char=? c (str-fst s))
-            (char=any c (str-rst s)))))
-  (define (str->strs) (format-exp (map mk-string (string->list str))))
+(define (ofString ? err)
   (λ (state)
-    (match ((satisfy (λ (c) (not (char=any c str)))) state)
-      [(Consumed! (Error (Msg pos inp exp)))
-       (Consumed (Error (Msg pos inp (cons (string-append "none of: " (str->strs)) exp))))]
-      [(Empty (Error (Msg pos inp exp)))
-       (Empty (Error (Msg pos inp (cons (string-append "none of: " (str->strs))
-                                        exp))))]
-      [ok ok])))
+     (match ((satisfy ?) state)
+       [(Consumed! (Error (Msg pos inp exp)))
+        (Consumed (Error (Msg pos inp (cons (err) exp))))]
+       [(Empty (Error (Msg pos inp exp)))
+        (Empty (Error (Msg pos inp (cons (err) exp))))]
+       [ok ok])))
 
 (define (oneOf str)
-  (define (char=any c s)
-    (if (str-empty? s)
-        #f
-        (or (char=? c (str-fst s))
-            (char=any c (str-rst s)))))
-  (define (str->strs)
-    (format-exp (map (λ (x) (string-append "\"" (mk-string x) "\"")) (string->list str))))
-  (λ (state)
-    (match ((satisfy (λ (c) (char=any c str))) state)
-      [(Consumed! (Error (Msg pos inp exp)))
-       (Consumed (Error (Msg pos inp (cons (string-append "one of: " (str->strs)) exp))))]
-      [(Empty (Error (Msg pos inp exp)))
-       (Empty (Error (Msg pos inp (cons (string-append "one of: " (str->strs)) exp))))]
-      [ok ok])))
+  (ofString (curry char-in-string? str)
+            (thunk (string-append "one of: " (str->strs str)))))
+(define (noneOf str)
+  (ofString (compose1 not (curry char-in-string? str))
+            (thunk (string-append "none of: " (str->strs str)))))
        
+(define (char-in-string? str char) ;; char is last to facilitate currying
+  (for/or ([c (in-string str)])
+    (char=? c char)))
+
+(define (str->strs str)
+  (format-exp (map mk-string (string->list str))))
+
 (define (oneOfStrings . ss)
-  (<?> (parser-compose (cs <- (choice (map (compose1 try string) ss)))
-                       (return (list->string cs)))
+  (<?> (choice (map (compose1 try string) ss))
        (string-append "one of: "
                       (string-join (map ~s ss) ", "))))
+
+(define (oneOfStringsAnyCase . ss)
+  (<?> (choice (map (compose1 try stringAnyCase) ss))
+       (string-append "one of: "
+                      (string-join (map ~s ss) ", ")
+                      " (case insensitive)")))
+
 
 ;; creates a parser that combines two parsers p and f
 ;; - if p succeeds but does not consume input, then f determines result
@@ -272,27 +269,43 @@
     [(Msg pos inp _) (Msg pos inp (list exp))]))
 
 ;; creates a parser that parses char c
-(define (char c) (<?> (satisfy (curry char=? c)) (mk-string c)))
-(define $letter (<?> (satisfy char-alphabetic?) "letter"))
-(define $digit (<?> (satisfy char-numeric?) "digit"))
+(define (char c)
+  (<?> (satisfy (curry char=? c))
+       (mk-string c)))
+(define (charAnyCase c)
+  (<?> (satisfy (curry char-ci=? c))
+       (~a (char-upcase c) " or " (char-downcase c))))
+(define $letter
+  (<?> (satisfy char-alphabetic?)
+       "letter"))
+(define $digit
+  (<?> (satisfy char-numeric?)
+       "digit"))
 (define $alphaNum 
   (<?> (satisfy (λ (c) (or (char-alphabetic? c) (char-numeric? c)))) 
        "letter or digit"))
-(define $hexDigit (<?> (<or> $digit
-                            (oneOf "abcdef")
-                            (oneOf "ABCDEF"))
-                      "hexadecimal digit"))
+(define $hexDigit
+  (<?> (<or> $digit
+             (oneOf "abcdef")
+             (oneOf "ABCDEF"))
+       "hexadecimal digit"))
 (define $space (<?> (satisfy char-whitespace?) "space"))
 (define $spaces (<?> (skipMany $space) "white space"))
 (define $anyChar (satisfy (λ _ #t)))
 (define $newline (<?> (char #\newline) "new-line"))
 (define $tab (<?> (char #\tab) "tab"))
 
-;; consumes and returns given string
-(define (string str)
+;; Consume and return a string for which the parser succeeds on each
+;; character.
+(define (string* str p)
   (if (str-empty? str)
       (return null)
-      (parser-cons (char (str-fst str)) (string (str-rst str)))))
+      (parser-cons (p (str-fst str))
+                   (string* (str-rst str) p))))
+(define (string str) ;case sensitive
+  (string* str char))
+(define (stringAnyCase str) ;case insensitive
+  (string* str charAnyCase))
 
 ;; parser that only succeeds on empty input
 (define $eof

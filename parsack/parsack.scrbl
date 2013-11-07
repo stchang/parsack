@@ -104,13 +104,17 @@ Parsec implementation in Racket. See @cite["parsec"].
 @defproc[(satisfy [p? (-> any/c boolean?)]) parser?]{
   Creates a parser that consumes and returns one character if it satisfies predicate @racket[p?].}
 @defproc[(char [c char?]) parser?]{
-  Creates a parser that parses char @racket[c].}
+  Creates a parser that parses char @racket[c], case-sensitive.}
+@defproc[(charAnyCase [c char?]) parser?]{
+  Creates a parser that parses char @racket[c], case-insensitive.}
 @defproc[(noneOf [str string?]) parser?]{
   Creates a parser that consumes and returns one character if the character does not appear in @racket[str].}
 @defproc[(oneOf [str string?]) parser?]{
   Creates a parser that consumes and returns one character if the character appears in @racket[str].}
 @defproc[(oneOfStrings [str string?] ...) parser?]{
-  Creates a parser that consumes and returns any of the @racket[str]s.}
+  Creates a parser that consumes and returns any of the @racket[str]s, case-sensitive. Note that the parse result is @racket[(listof char?)] not @racket[string?].}
+@defproc[(oneOfStringsAnyCase [str string?] ...) parser?]{
+  Creates a parser that consumes and returns any of the @racket[str]s, case-insensitive. Note that the parse result is @racket[(listof char?)] not @racket[string?].}
 @defproc[(string [str string?]) parser?]{
   Creates a parser that parses but does not return @racket[str].}
 
@@ -166,8 +170,8 @@ A @deftech{parser} is a function that consumes a @racket[State] and returns eith
 @defstruct*[Msg ([pos Pos?][unexpected string?][expected (listof string?)])]{
   Indicates parse error.}
 
-@defstruct*[Pos ([pos exact-nonnegative-integer?]
-                 [ln (or/c exact-nonnegative-integer? #f)]
+@defstruct*[Pos ([ofs exact-nonnegative-integer?]
+                 [line (or/c exact-nonnegative-integer? #f)]
                  [col (or/c exact-nonnegative-integer? #f)])]{
   Position of parser, with line and column information if it's available.}
 
