@@ -62,7 +62,7 @@
                    (fmt-err-msg 1 1 1 "b" (list "a" "b") #:extra "none of"))
 (check-parsing ((noneOf "ab") "c") "c" "")
 
-(check-empty-parsing ($eof "") "" "")
+(check-empty-parsing ($eof "") "")
 (check-parse-error ($eof "a") (fmt-err-msg 1 1 1 "non-empty-input" "end-of-file"))
 (check-parsing ($eol "\n") "\n" "")
 (check-parse-error ($eol "a")
@@ -73,7 +73,7 @@
 (check-parsing ((>> $eol $eof) "\r\n") "" "")
 (check-parsing ((>> $eol $eof) "\r") "" "")
 
-(check-empty-parsing ((many $letter) "") "" "")
+(check-empty-parsing ((many $letter) "") "")
 (check-parsing ((many $letter) "a") "a" "")
 (check-parsing ((many $letter) "aa") "aa" "")
 (check-parsing ((many $letter) "abc") "abc" "")

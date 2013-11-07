@@ -25,13 +25,16 @@
     [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
      (check-equal? consumed (list (list (string->list x) ...) ...))
      (check-equal? remaining rst)]))
-(define-syntax-rule (check-empty-parsing e parsed rst)
-  (match (force-Consumed e)
-    [(Empty (Ok result (State remaining pos) (Msg pos msg exp)))
-     (if (list? result)
-         (check-equal? result (string->list parsed))
-         (check-equal? result (car (string->list parsed))))
-     (check-equal? remaining rst)]))
+(define-syntax check-empty-parsing
+  (syntax-rules ()
+    [(_ e parsed) (check-empty-parsing e parsed "")]
+    [(_ e parsed rst)
+     (match (force-Consumed e)
+       [(Empty (Ok result (State remaining pos) (Msg pos msg exp)))
+        (if (list? result)
+            (check-equal? result (string->list parsed))
+            (check-equal? result (car (string->list parsed))))
+        (check-equal? remaining rst)])]))
 (define-syntax check-parse-error
   (syntax-rules ()
     [(_ e) (check-parse-error e "")]
