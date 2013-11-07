@@ -27,7 +27,7 @@
      (check-equal? remaining rst)]))
 (define-syntax check-empty-parsing
   (syntax-rules ()
-    [(_ e parsed) (check-empty-parsing e parsed "")]
+    [(_ e rst) (check-empty-parsing e "" rst)]
     [(_ e parsed rst)
      (match (force-Consumed e)
        [(Empty (Ok result (State remaining pos) (Msg pos msg exp)))
