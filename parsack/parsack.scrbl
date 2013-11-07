@@ -91,7 +91,7 @@ Parsec implementation in Racket. See @cite["parsec"].
 @defproc[(between [open parser?][close parser?][p parser?]) parser?]{
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
 @defproc[(lookAhead [p parser?]) parser?]{
-  Creates a parser that parses with @racket[p] but consumes no input.}
+  Creates a parser that parses with @racket[p] and returns its result, but consumes no input.}
 @defproc[(<!> [p parser?] [q parser? $anyChar]) parser?]{
   Similar to @racket[noneOf] but more general. Creates a parser that errors if @racket[p] successfully parses input, otherwise parses with @racket[q].
   @racket[q] defaults to @racket[$anyChar] if unspecified.}
