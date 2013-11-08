@@ -6,3 +6,4 @@
 (require "../examples/tests/http-request-parser-tests.rkt")
 (require "../examples/tests/json-parser-tests.rkt")
 (require "../examples/tests/url-query-parser-tests.rkt")
+(require "parse-result-tests.rkt")
