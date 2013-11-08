@@ -348,6 +348,7 @@
 (define (parse-result p s)
   (match (parse p s)
     [(Consumed! (Ok parsed _ _)) parsed]
+    [(Empty     (Ok parsed _ _)) parsed]
     [x (error 'parse-result (~v x))]))
 
 ;; parser compose
