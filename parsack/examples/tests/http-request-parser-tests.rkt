@@ -17,7 +17,7 @@
 ;; http://search.cpan.org/~gaas/HTTP-Message-6.06/lib/HTTP/Request/Common.pm
 
 ;; no terminating \n
-(check-exn exn:fail? (thunk (parse $p_request "GET /pub/WWW/TheProject.html HTTP/1.1")))
+(check-exn exn:fail:parsack? (thunk (parse $p_request "GET /pub/WWW/TheProject.html HTTP/1.1")))
 
 (check-parse (parse $p_request "GET /pub/WWW/TheProject.html HTTP/1.1\n\n")
              (HttpRequest 'GET "pub/WWW/TheProject.html" null #f))

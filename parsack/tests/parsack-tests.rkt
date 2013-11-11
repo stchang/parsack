@@ -5,15 +5,15 @@
 
 ;; parse-error: at pos 0
 ;; unexpected @: expected letter, digit or _
-(check-exn exn:fail? (thunk (parse $identifier "")))
+(check-exn exn:fail:parsack? (thunk (parse $identifier "")))
 
 ;; parse-error: at pos 0
 ;; unexpected @: expected identifier
-(check-exn exn:fail? (thunk (parse $identifier "@")))
+(check-exn exn:fail:parsack? (thunk (parse $identifier "@")))
 
 ;; parse-error: at pos 0
 ;; unexpected *: expected digit or letter
-(check-exn exn:fail?
+(check-exn exn:fail:parsack?
            (thunk (parse (>> (<or> $digit (return #\0)) $letter) "*")))
 
 
