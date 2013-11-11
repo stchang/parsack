@@ -6,7 +6,7 @@
 ;; - does not support quoted cells
 
 ;; cellContent in csv-parser.rkt
-(define $cell (many (noneOf ",\n")))
+(define $cell (many (noneOf ",\n\r")))
 
 ;; a line must end in \n
 (define $line (sepBy $cell (char #\,)))
