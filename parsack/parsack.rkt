@@ -19,11 +19,11 @@
 ;; where str = input
 ;;       pos = Pos
 
-;; A Message is a (Msg Pos String [List String])
+;; A Message is a (Msg Pos (-> String) [List (-> String)])
 (struct Msg (pos str strs) #:transparent)
 ;; where pos = Pos
-;;       str = unexpected input
-;;       strs = possible expected inputs
+;;       str = (thunk of) unexpected input
+;;       strs = (thunks of) possible expected inputs
 
 ;; A [Consumed X] is one of:
 ;; - (Consumed [Reply X])
@@ -89,9 +89,9 @@
   (λ (state)
      (match ((satisfy ?) state)
        [(Consumed! (Error (Msg pos inp exp)))
-        (Consumed (Error (Msg pos inp (cons (err) exp))))]
+        (Consumed (Error (Msg pos inp (cons err exp))))]
        [(Empty (Error (Msg pos inp exp)))
-        (Empty (Error (Msg pos inp (cons (err) exp))))]
+        (Empty (Error (Msg pos inp (cons err exp))))]
        [ok ok])))
 
 (define (oneOf str)
@@ -196,11 +196,10 @@
        [emp emp])]))
 
 ;; converts intermediate parse result to string -- for err purposes
-;; Note: Efficiency of this matters, it may be called frequently.  The
-;; following is fast-enough but will fail 3 tests for nicely formatted
-;; error messages. Hot fix.
+;; Note: Efficiency of this matters, do dont call until throwing the exception
 (define (result->str res)
   (cond [(char? res) (mk-string res)]
+        [(and (list? res) (andmap char? res)) (list->string res)]
         [else res]))
 
 (define (<!> p [q $anyChar]) 
@@ -208,8 +207,8 @@
     [(and state (State inp pos))
      (match (p state)
        [(Consumed! (Ok res _ _))
-        (define result (result->str res))
-        (Empty (Error (Msg pos result (list (format "not: ~a" result)))))]
+        (Empty (Error (Msg pos (thunk (result->str res)) 
+                           (list (thunk (format "not: ~a" (result->str res)))))))]
        [_ (q state)])]))
 
 (define (notFollowedBy p)
@@ -217,8 +216,8 @@
     [(and state (State inp pos))
      (match (p state)
        [(Consumed! (Ok res _ _))
-        (define result (result->str res))
-        (Empty (Error (Msg pos result (list (format "not: ~a" result)))))]
+        (Empty (Error (Msg pos (thunk (result->str res)) 
+                           (list (thunk (format "not: ~a" (result->str res)))))))]
        [_ (Empty (Ok null state (Msg pos null null)))])]))
 
 ;; parse with p 0 or more times
@@ -325,24 +324,29 @@
 
 (define $identifier (<?> (many1 (<or> $letter $digit (char #\_))) "identifier"))
 
-(define (format-exp exp) (string-join exp ", " #:before-last " or "))
+(define (frc e) (if (procedure? e) (e) e))
+
+(define (format-exp exp) 
+  (string-join (map frc exp) ", " #:before-last " or "))
 
 ;; errors have to be printed ~s, otherwise newlines get messed up
 (define (parse p inp) 
   (match (p (State inp (start-pos)))
     [(Empty (Error (Msg pos msg exp)))
-     (parsack-error (format "at ~a\nunexpected: ~s\n  expected: ~s"
-                            (format-pos pos) msg (format-exp exp)))]
+     (parsack-error 
+      (format "at ~a\nunexpected: ~s\n  expected: ~s"
+              (format-pos pos) (frc msg) (format-exp exp)))]
     [(Consumed! (Error (Msg pos msg exp)))
-     (parsack-error (format "at ~a\nunexpected: ~s\n  expected: ~s"
-                            (format-pos pos) msg (format-exp exp)))]
+     (parsack-error 
+      (format "at ~a\nunexpected: ~s\n  expected: ~s"
+              (format-pos pos) (frc msg) (format-exp exp)))]
     [x x]))
   
 (define (parse-result p s)
   (match (parse p s)
     [(Consumed! (Ok parsed _ _)) parsed]
     [(Empty     (Ok parsed _ _)) parsed]
-    [x (error 'parse-result (~v x))]))
+    [x (parsack-error (~v x))]))
 
 ;; parser compose
 (define-syntax (parser-compose stx)
