@@ -88,6 +88,6 @@
                   (string-append extra ": " (format-exp strs)) 
                   (format-exp strs)))
   (format "parse ERROR: at ~a\nunexpected: ~s\n  expected: ~s"
-          (format-pos (Pos (sub1 pos) (sub1 line) (sub1 col)))
+          (format-pos (Pos line col pos))
           str
           tmp))

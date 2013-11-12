@@ -48,21 +48,22 @@
   (raise (exn:fail:parsack (string-append "parse ERROR: " msg)
                            (current-continuation-marks))))
 
-;; A Pos is a (Pos ofs line col)
-(struct Pos (ofs line col) #:transparent)
+;; A Pos is a (Pos line col ofs)
+;; - numbers are 1-based
+(struct Pos (line col ofs) #:transparent)
 (define parse-source (make-parameter #f)) ;; not in Pos for efficiency
 (define (start-pos)
-  (Pos 0 0 0))
+  (Pos 1 1 1))
 (define (incr-pos p c)
   (match* (p c)
-    [((Pos ofs line col) #\newline) (Pos (add1 ofs) (add1 line) 0)]
-    [((Pos ofs line col) _        ) (Pos (add1 ofs) line        (add1 col))]))
+    [((Pos line col ofs) #\newline) (Pos (add1 line) 1 (add1 ofs) )]
+    [((Pos line col ofs) _        ) (Pos line (add1 col) (add1 ofs) )]))
 (define (format-pos p)
   (match* (p (parse-source))
-    [((Pos ofs line col) (? path-string? src))
-     (format "~a:~a:~a:~a" src (add1 line) (add1 col) (add1 ofs))]
-    [((Pos ofs line col) _)
-     (format "~a:~a:~a" (add1 line) (add1 col) (add1 ofs))]))
+    [((Pos line col ofs) (? path-string? src))
+     (format "~a:~a:~a:~a" src line col ofs)]
+    [((Pos line col ofs) _)
+     (format "~a:~a:~a" line col ofs)]))
 
 ;; creates a parser that consumes no input and returns x
 (define (return x)

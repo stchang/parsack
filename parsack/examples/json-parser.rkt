@@ -36,7 +36,7 @@
 
 
 (define/match (pos+ p m)
-  [((Pos n ln col) m) (Pos (+ n m) ln (+ col m))])
+  [((Pos ln col n) m) (Pos ln (+ col m) (+ n m))])
 
 ;; uses Racket's read to read a datum
 ;; - if it's a number, return it
@@ -49,8 +49,8 @@
     (define pos (file-position p))
     (define rst (port->string p))
     (if (number? n)
-        (Consumed (Ok n (State rst (pos+ (State-pos state) pos)) (Msg 0 "" null)))
-        (Empty (Error (Msg 0 "number" null))))))
+        (Consumed (Ok n (State rst (pos+ (State-pos state) pos)) (Msg (Pos 1 1 1) "" null)))
+        (Empty (Error (Msg (Pos 1 1 1) "number" null))))))
 
 (define $p_bool (<or> (>> (string "true") (return #t))
                       (>> (string "false") (return #f))))
