@@ -142,8 +142,7 @@
             (match ((f x) rest)
               [(Consumed reply2) reply2]
               [(Empty (Error msg2)) (Error (merge msg1 msg2))]
-              [(Empty ok) ok]
-              #;[(Empty reply2) reply2])]
+              [(Empty ok) ok])]
            [error error])))])))
 (define (>> p q) (>>= p (λ _ q)))
 
@@ -155,17 +154,11 @@
        (match (q state)
          [(Empty (Error msg2)) (mergeError msg1 msg2)]
          [(Empty (Ok x inp msg2)) (mergeOk x inp msg1 msg2)]
-         #;[(Consumed (Ok x inp msg2)) (mergeConsumed x inp msg1 msg2)]
          [consumed consumed])]
       [(Empty (Ok x inp msg1))
        (match (q state)
          [(Empty (Error msg2)) (mergeOk x inp msg1 msg2)]
          [(Empty (Ok _ _ msg2)) (mergeOk x inp msg1 msg2)]
-         #;[(Consumed (Ok x inp msg2)) (mergeConsumed x inp msg1 msg2)]
-         [consumed consumed])]
-      #;[(Consumed (Ok x inp msg1))
-       (match (q inp)
-         [(Empty (Error msg2)) (mergeError msg1 msg2)]
          [consumed consumed])]
       [consumed consumed])))
 (define (mergeConsumed x inp msg1 msg2) (Consumed (Ok x inp (merge msg1 msg2))))
@@ -201,42 +194,28 @@
         (Empty (Ok result input (Msg pos inp strs)))]
        [emp emp])]))
 
-(define (<!> p [q $anyChar])
-  (<or> (parser-compose (x <- (try p)) (unexpected x)) q)
-  #;(match-lambda
-   [(and input (State inp pos))
-    (match (p input)
-      [(Consumed! (Ok x state msg)) 
-       (Empty (Error (Msg pos inp (list (string-append "not: " inp)))))]
-      [_ (Empty (Ok null input (Msg pos inp null)))])]))
+(define (<!> p [q $anyChar]) 
+  (<or> (parser-compose (x <- (try p)) (unexpected x))
+        q))
 
 ;; parse with p 0 or more times
-(define (many p)
-  (<or> 
-   ;(>>= p (λ (x) (>>= (many p) (λ (xs) (return (cons x xs))))))
-   #;(parser-compose (x  <- p)
-                   (xs <- (many p))
-                   (return (cons x xs)))
-   (parser-cons p (many p))
-   (return null)))
+(define (many p) 
+  (<or> (parser-cons p (many p)) 
+        (return null)))
 
 ;; parse with p 1 or more times
 (define (many1 p)
-;  (>>= p (λ (x) (>>= (<or> (many1 p) (return null)) (λ (xs) (return (cons x xs))))))
-  #;(parser-compose (x  <- p)
-                  (xs <- (<or> (many1 p) (return null)))
-                  (return (cons x xs)))
-  (parser-cons p (<or> (many1 p) (return null))))
+  (parser-cons p (<or> (many1 p)
+                       (return null))))
 
-(define (skipMany p) (<or> (parser-compose p (skipMany p)) (return null)))
+(define (skipMany p) 
+  (<or> (parser-compose p (skipMany p))
+        (return null)))
 (define (skipMany1 p) (parser-compose p (skipMany p)))
 
 ;; applies parser p zero or more times until parser end succeeds
 (define (manyTill p end)
   (<or> (>> end (return null))
-        #;(parser-compose (x <- p)
-                        (xs <- (manyTill p end))
-                        (return (cons x xs)))
         (parser-cons p (manyTill p end))))
 
 ;; applies parser p one or more times until parser end succeeds
@@ -245,23 +224,14 @@
                   (xs <- (manyTill p end))
                   (return (cons x xs))))
 
-(define (sepBy1 p sep)
-  ;(>>= p (λ (x) (>>= (many (>>= sep (λ _ p))) (λ (xs) (return (cons x xs))))))
-  #;(parser-compose (x  <- p)
-                  (xs <- (many (>>= sep (λ _ p))))
-                  (return (cons x xs)))
-  (parser-cons p (many (>> sep p))))
-(define (sepBy p sep) (<or> (sepBy1 p sep) (return null)))
+(define (sepBy1 p sep) (parser-cons p (many (>> sep p))))
+(define (sepBy p sep) (<or> (sepBy1 p sep) 
+                            (return null)))
 
 (define (endBy p end) 
-  (many #;(parser-compose (x <- p) end (return x))
-        (parser-one (~> p) end)))
-;  ;(<or> 
-;   (many (>>= p (λ (x) (>>= end (λ _ (return x)))))))
-;   ;(return null)))
+  (many (parser-one (~> p) end)))
 
 (define (between open close p)
-  #;(parser-compose open (x <- p) close (return x))
   (parser-one open (~> p) close))
    
 
