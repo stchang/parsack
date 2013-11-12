@@ -95,24 +95,24 @@
 (check-empty-parsing ((lookAhead (string "A\n")) "A\n") "A\n" "A\n")
 (check-parsing ((>> (lookAhead (string "A\n")) $letter) "A\n") "A" "\n")
 (check-parse-error ((<!> (string "A\n")) "A\n")
-                   (fmt-err-msg 2 1 3 "" (list "(A \n)") #:extra "not followed by"))
+                   (fmt-err-msg 1 1 1 "A\n" (list "A\n") #:extra "not"))
 (check-parse-error ((<!> (string "A\n")) "A\n\n")
-                   (fmt-err-msg 2 1 3 "" (list "(A \n)") #:extra "not followed by"))
+                   (fmt-err-msg 1 1 1 "A\n" (list "A\n") #:extra "not"))
 (check-parsing ((<!> (string "A\n")) "AB") "A" "B")
 (check-parsing ((<!> (string "A\n")) "BA") "B" "A")
 (check-parsing ((<!> (string "A\n")) "1A") "1" "A")
  
 (check-parse-error ((parser-seq (char #\a) (notFollowedBy (char #\b))) "ab")
-                   (fmt-err-msg 1 2 2 "" (list "b") #:extra "not followed by"))
+                   (fmt-err-msg 1 2 2 "b" (list "b") #:extra "not"))
 (check-parsing ((parser-seq (char #\a) (~ (notFollowedBy (char #\b)))) "ac") "a" "c")
 
 (check-parse-error ((parser-seq (char #\a) (notFollowedBy (string "bc"))) "abc")
-                   (fmt-err-msg 1 2 2 "" (list "(b c)") #:extra "not followed by"))
+                   (fmt-err-msg 1 2 2 "bc" (list "bc") #:extra "not"))
 (check-parsing ((parser-seq (char #\a) (~ (notFollowedBy (string "bc")))) "abd") "a" "bd")
 
 (check-parsing ((parser-one (~> (string "let")) (notFollowedBy $alphaNum)) "let ") "let" " ")
 (check-parse-error ((parser-one (~> (string "let")) (notFollowedBy $alphaNum)) "lets")
-                   (fmt-err-msg 1 4 4 "" (list "not followed by: s")))
+                   (fmt-err-msg 1 4 4 "s" (list "s") #:extra "not"))
 ;; test manytill
 (check-parsing ((manyTill (string "one") (string "two")) "two") "" "")
 (check-parse-error ((many1Till (string "one") (string "two")) "two")
@@ -122,9 +122,9 @@
 (check-parsings ((many1Till (string "one") (string "two")) "onetwo") "one" "")
 (check-parsings ((many1Till (string "one") (string "two")) "oneonetwo") "one" "one" "")
 (check-parse-error ((manyTill (string "one") (string "two")) "ontwo")
-                   (fmt-err-msg 1 3 3 "" (list "e")))
+                   (fmt-err-msg 1 3 3 "t" (list "e")))
 (check-parse-error ((many1Till (string "one") (string "two")) "ontwo")
-                   (fmt-err-msg 1 3 3 "" (list "e")))
+                   (fmt-err-msg 1 3 3 "t" (list "e")))
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar") "bar" "")
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar___") "bar" "___")
 (check-parse-error ((oneOfStrings "foo" "bar" "baz") "BAR")
@@ -134,3 +134,6 @@
 (check-parsing ((oneOfStringsAnyCase "foo" "bar" "baz") "BAR___") "BAR" "___")
 (check-parse-error ((oneOfStrings "foo" "bar" "baz") "XXX")
                    "parse ERROR: at 1:1:1\nunexpected: \"X\"\n  expected: \"one of: \\\"foo\\\", \\\"bar\\\", \\\"baz\\\"\"")
+
+;; check proper "unexpected" on partial parse + fail
+(check-parse-error ((string "ac") "ab") (fmt-err-msg 1 2 2 "b" (list "c")))

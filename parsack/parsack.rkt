@@ -165,7 +165,7 @@
 (define (mergeOk x inp msg1 msg2) (Empty (Ok x inp (merge msg1 msg2))))
 (define (mergeError msg1 msg2) (Empty (Error (merge msg1 msg2))))
 (define/match (merge msg1 msg2)
-  [((Msg pos inp exp1) (Msg _ _ exp2))
+  [((Msg _ _ exp1) (Msg pos inp exp2))
    (Msg pos inp (append exp1 exp2))])
                       
 ;; assumes (length args) >= 2
@@ -194,9 +194,29 @@
         (Empty (Ok result input (Msg pos inp strs)))]
        [emp emp])]))
 
+;; converts intermediate parse result to string -- for err purposes
+(define (result->str res)
+  (cond [(list? res) (list->string res)]
+        [(char? res) (mk-string res)]
+        [else res]))
+
 (define (<!> p [q $anyChar]) 
-  (<or> (parser-compose (x <- (try p)) (unexpected x))
-        q))
+  (match-lambda 
+    [(and state (State inp pos))
+     (match (p state)
+       [(Consumed! (Ok res _ _))
+        (define result (result->str res))
+        (Empty (Error (Msg pos result (list (format "not: ~a" result)))))]
+       [_ (q state)])]))
+
+(define (notFollowedBy p)
+  (match-lambda
+    [(and state (State inp pos))
+     (match (p state)
+       [(Consumed! (Ok res _ _))
+        (define result (result->str res))
+        (Empty (Error (Msg pos result (list (format "not: ~a" result)))))]
+       [_ (Empty (Ok null state (Msg pos null null)))])]))
 
 ;; parse with p 0 or more times
 (define (many p) 
@@ -370,12 +390,3 @@
 (define (choice ps) (apply <or> ps))
 
 
-(define (notFollowedBy p)
-  (try (<or> (parser-compose (c <- (try p))
-                             (unexpected c))
-             (return null))))
-
-(define (unexpected v)
-  (match-lambda
-   [(and state (State inp pos))
-    (Empty (Error (Msg pos inp (list (format "not followed by: ~a" v)))))]))
