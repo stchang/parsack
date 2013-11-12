@@ -196,9 +196,11 @@
        [emp emp])]))
 
 ;; converts intermediate parse result to string -- for err purposes
+;; Note: Efficiency of this matters, it may be called frequently.  The
+;; following is fast-enough but will fail 3 tests for nicely formatted
+;; error messages. Hot fix.
 (define (result->str res)
-  (cond [(list? res) (list->string res)]
-        [(char? res) (mk-string res)]
+  (cond [(char? res) (mk-string res)]
         [else res]))
 
 (define (<!> p [q $anyChar]) 
