@@ -197,9 +197,9 @@
 
 ;; converts intermediate parse result to string -- for err purposes
 (define (result->str res)
-  (cond [(list? res) (list->string res)]
+  (cond [(list? res) (string-join (map ~a res) "")]
         [(char? res) (mk-string res)]
-        [else res]))
+        [else (~a res)]))
 
 (define (<!> p [q $anyChar]) 
   (match-lambda 
