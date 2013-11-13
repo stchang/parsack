@@ -170,8 +170,8 @@ A @deftech{parser} is a function that consumes a @racket[State] and returns eith
 @defstruct*[Error ([msg Msg?])]{
   Indicates parse error.}
                                 
-@defstruct*[Msg ([pos Pos?][unexpected string?][expected (listof string?)])]{
-  Indicates parse error.}
+@defstruct*[Msg ([pos Pos?][unexpected (-> string?)][expected (listof (-> string?))])]{
+  Indicates parse error. Error message generation is delayed until an exception it thrown.}
 
 @defstruct*[Pos ([line exact-nonnegative-integer?]
                  [col exact-nonnegative-integer?]
