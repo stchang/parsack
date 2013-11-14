@@ -130,9 +130,10 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @defthing[$space parser?]{Parses a space.}
 @defthing[$spaces parser?]{Parses zero or more spaces.}
 @defthing[$anyChar parser?]{Parses any char.}
-@defthing[$newline parser?]{Parses newline char.}
+@defthing[$newline parser?]{Parses newline char. This is the singular @racket[#\n] character. See also @racket[$eol].}
 @defthing[$tab parser?]{Parses tab char.}
-@defthing[$eol parser?]{Parses end of line.}
+@defthing[$eol parser?]{Parses end of line. @racket[$eol] succeeds on @racket["\n"], @racket["\r"], @racket["\r\n"], or @racket["\n\r"]. 
+                        See also @racket[$newline].}
 @defthing[$eof parser?]{Parses end of file.}
 @defthing[$identifier parser?]{Parsers string containing only numbers, letters, or underscore.}
 
