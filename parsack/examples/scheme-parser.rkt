@@ -273,7 +273,11 @@
    (check-parse-exn "\"\\\"")
 
    (check-parsed? "\"\\\"\"" (scheme-string "\""))
-   (check-parse-exn "\"\"\""))
+   #;(check-parse-exn "\"\"\"")
+   (match (force (Consumed-reply (parsack-parse "\"\"\"")))
+     [(Ok consumed (State remaining _) _)
+      (check-equal? consumed (scheme-string ""))
+      (check-equal? remaining "\"")]))
 
   (test-case
    "numbers"
