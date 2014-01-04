@@ -1,8 +1,8 @@
 #lang racket
 
-;; This parsack parser is roughly equivalent to the parseck in this
+;; This parsack parser is roughly equivalent to the parsec parser in this
 ;; Haskell tutorial: http://jonathan.tang.name/files/scheme_in_48/tutorial/overview.html
-;; The parser currently handles r5rs-like scheme without supporting the
+;; The parser currently handles a r5rs-like scheme without supporting the
 ;; full numerical tower.
 
 (require parsack)
