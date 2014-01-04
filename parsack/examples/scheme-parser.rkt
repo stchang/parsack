@@ -184,7 +184,7 @@
 
   (define (check-parsed? string expected)
     (test-equal?
-	 (string-append "parsing: " string)
+     (string-append "parsing: " string)
      (Ok-parsed (force (Consumed-reply (parsack-parse string))))
      expected))
 
@@ -276,18 +276,18 @@
    "numbers"
 
    (test-case
-	"base 10"
-	(check-parsed? "1" (scheme-number 1))
-	(check-parsed? "2" (scheme-number 2))
-	(check-parsed? "3" (scheme-number 3))
-	(check-parsed? "4" (scheme-number 4))
-	(check-parsed? "5" (scheme-number 5))
-	(check-parsed? "6" (scheme-number 6))
-	(check-parsed? "7" (scheme-number 7))
-	(check-parsed? "8" (scheme-number 8))
-	(check-parsed? "9" (scheme-number 9))
-	(check-parsed? "10" (scheme-number 10))
-	(check-parsed? "0" (scheme-number 0)))
+    "base 10"
+    (check-parsed? "1" (scheme-number 1))
+    (check-parsed? "2" (scheme-number 2))
+    (check-parsed? "3" (scheme-number 3))
+    (check-parsed? "4" (scheme-number 4))
+    (check-parsed? "5" (scheme-number 5))
+    (check-parsed? "6" (scheme-number 6))
+    (check-parsed? "7" (scheme-number 7))
+    (check-parsed? "8" (scheme-number 8))
+    (check-parsed? "9" (scheme-number 9))
+    (check-parsed? "10" (scheme-number 10))
+    (check-parsed? "0" (scheme-number 0)))
 
    (test-case
     "binary"
@@ -297,39 +297,39 @@
     (check-parse-exn "#b11()10")))
 
   (test-case
-    "octal"
-    (check-parsed? "#o1237" (scheme-number 671))
-    (check-parse-exn "#o")
-	(check-parse-exn "#obaXY"))
+   "octal"
+   (check-parsed? "#o1237" (scheme-number 671))
+   (check-parse-exn "#o")
+   (check-parse-exn "#obaXY"))
 
   (test-case
-    "hexadecimal"
-    (check-parsed? "#xfff" (scheme-number 4095))
-    (check-parse-exn "#x")
-    (check-parsed? "#xab8cef102735469" (scheme-number 772594870617592937))
-	(check-parse-exn "#xbaXY"))
+   "hexadecimal"
+   (check-parsed? "#xfff" (scheme-number 4095))
+   (check-parse-exn "#x")
+   (check-parsed? "#xab8cef102735469" (scheme-number 772594870617592937))
+   (check-parse-exn "#xbaXY"))
 
   (test-case
    "list"
    (check-equal?
-	(Ok-parsed (force (Consumed-reply (parsack-parse "()"))))
-	(list)))
+    (Ok-parsed (force (Consumed-reply (parsack-parse "()"))))
+    (list)))
 
   (test-case
    "dotted-list"
    (check-equal?
-	(Ok-parsed (force (Consumed-reply (parsack-parse "(a b . c)"))))
-	(cons (list (scheme-atom "a") (scheme-atom "b")) (scheme-atom "c")))
+    (Ok-parsed (force (Consumed-reply (parsack-parse "(a b . c)"))))
+    (cons (list (scheme-atom "a") (scheme-atom "b")) (scheme-atom "c")))
    (check-equal?
-	(Ok-parsed (force (Consumed-reply (parsack-parse "(a . b)"))))
-	(cons (list (scheme-atom "a")) (scheme-atom "b"))))
+    (Ok-parsed (force (Consumed-reply (parsack-parse "(a . b)"))))
+    (cons (list (scheme-atom "a")) (scheme-atom "b"))))
 
   (test-case
    "quoted"
    (test-equal?
-	"parsed quoted"
-	(Ok-parsed (force (Consumed-reply (parsack-parse "'()"))))
-	(list (scheme-atom "quote") '())))
+    "parsed quoted"
+    (Ok-parsed (force (Consumed-reply (parsack-parse "'()"))))
+    (list (scheme-atom "quote") '())))
 
   (test-case
    "code comments"
