@@ -188,11 +188,14 @@
      (Ok-parsed (force (Consumed-reply (parsack-parse string))))
      expected))
 
-  (define (check-parse-exn string)
-    (test-exn
-     (string-append "parsing: " string)
-     exn:fail:parsack?
-     (lambda () (parsack-parse string))))
+  (define-syntax (check-parse-exn stx)
+    (syntax-case stx ()
+      [(_ string)
+       (syntax/loc stx
+         (test-exn
+          (string-append "parsing: " string)
+          exn:fail:parsack?
+          (lambda () (parsack-parse string))))]))
 
   (test-case
    "boolean"
