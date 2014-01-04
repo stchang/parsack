@@ -193,6 +193,7 @@
      (string-append "parsing: " string)
      exn:fail:parsack?
      (lambda () (parsack-parse string))))
+
   (test-case
    "boolean"
    (check-parsed? "#t" (scheme-bool #t))
@@ -231,7 +232,6 @@
 
    ;; should fail because these are case-sensitive
    (check-parse-exn "#\\BACKSPACE")
-
    (check-parse-exn "#\\NEWLINE")
    (check-parse-exn "#\\PAGE")
    (check-parse-exn "#\\TAB")
@@ -271,7 +271,6 @@
 
    (check-parsed? "\"\\\"\"" (scheme-string "\""))
    (check-parse-exn "\"\"\""))
-
 
   (test-case
    "numbers"
@@ -331,7 +330,6 @@
 	"parsed quoted"
 	(Ok-parsed (force (Consumed-reply (parsack-parse "'()"))))
 	(list (scheme-atom "quote") '())))
-
 
   (test-case
    "code comments"
