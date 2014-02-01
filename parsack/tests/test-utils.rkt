@@ -12,7 +12,7 @@
   (syntax-case stx ()
     [(_ e parsed rst)
      #`(match (force-Consumed e)
-         [(Consumed (Ok consumed (State remaining pos) (Msg pos2 msg exp)))
+         [(Consumed (Ok consumed (State remaining pos _) (Msg pos2 msg exp)))
           (if (list? consumed) ; if not list, then it's a single char
               #,(syntax/loc #'parsed 
                   (check-equal? consumed (string->list parsed)))
@@ -25,7 +25,7 @@
   (syntax-case stx ()
     [(_ e parsed ... rst)
      #`(match (force-Consumed e)
-         [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
+         [(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
           #,(syntax/loc (car (syntax->list #'(parsed ...)))
               (check-equal? consumed (list (string->list parsed) ...)))
           #,(syntax/loc #'rst (check-equal? remaining rst))])]))
@@ -33,7 +33,7 @@
   (syntax-case stx ()
     [(_ e (x ...) ... rst)
      #`(match (force-Consumed e)
-         [(Consumed (Ok consumed (State remaining pos) (Msg pos msg exp)))
+         [(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
           #,(syntax/loc (car (syntax->list (car (syntax->list #'((x ...) ...)))))
               (check-equal? consumed (list (list (string->list x) ...) ...)))
           #,(syntax/loc #'rst (check-equal? remaining rst))])]))
@@ -42,7 +42,7 @@
     [(_ e rst) (syntax/loc stx (check-empty-parsing e "" rst))]
     [(_ e parsed rst)
      #`(match (force-Consumed e)
-         [(Empty (Ok result (State remaining pos) (Msg pos msg exp)))
+         [(Empty (Ok result (State remaining pos _) (Msg pos msg exp)))
           (if (list? result)
               #,(syntax/loc #'parsed (check-equal? result (string->list parsed)))
               (begin #,(syntax/loc #'parsed 
