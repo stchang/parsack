@@ -49,7 +49,8 @@
     (define pos (file-position p))
     (define rst (port->string p))
     (if (number? n)
-        (Consumed (Ok n (State rst (pos+ (State-pos state) pos)) (Msg (Pos 1 1 1) "" null)))
+        (Consumed (Ok n (State rst (pos+ (State-pos state) pos) (State-user state))
+                      (Msg (Pos 1 1 1) "" null)))
         (Empty (Error (Msg (Pos 1 1 1) "number" null))))))
 
 (define $p_bool (<or> (>> (string "true") (return #t))
