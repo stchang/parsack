@@ -137,3 +137,20 @@
 
 ;; check proper "unexpected" on partial parse + fail
 (check-parse-error ((string "ac") "ab") (fmt-err-msg 1 2 2 "b" (list "c")))
+
+;; user state
+(check-equal?
+ (parse-result (parser-compose (setState 'key "val")
+                               $anyChar
+                               (x <- (getState 'key))
+                               (return x))
+               "whatever")
+ "val")
+(check-equal?
+ (parse-result (parser-compose (setState 'key "val")
+                               (withState (['key "new-val"])
+                                          $anyChar)
+                               (x <- (getState 'key))
+                               (return x))
+               "whatever")
+ "val")

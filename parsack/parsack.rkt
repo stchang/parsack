@@ -13,11 +13,12 @@
 ;; A [Parser X] is a function: State -> [Consumed X]
 ;;   where X = the type of the parsed output
 
-;; A State is a (State String Pos)
+;; A State is a (State String Pos UserState)
 ;; - parsers consume a State
-(struct State (str pos) #:transparent)
+(struct State (str pos user) #:transparent)
 ;; where str = input
 ;;       pos = Pos
+;;       user = UserState
 
 ;; A Message is a (Msg Pos (-> String) [List (-> String)])
 (struct Msg (pos str strs) #:transparent)
@@ -40,7 +41,7 @@
 (struct Error (msg) #:transparent)
 
 (define $err 
-  (match-lambda [(State inp pos) (Empty (Error (Msg pos inp null)))]))
+  (match-lambda [(State inp pos _) (Empty (Error (Msg pos inp null)))]))
 
 (struct exn:fail:parsack exn:fail ())
 
@@ -68,20 +69,20 @@
 ;; creates a parser that consumes no input and returns x
 (define (return x)
   (match-lambda 
-    [(and state (State _ pos)) 
+    [(and state (State _ pos _))
      (Empty (Ok x state (Msg pos "" null)))]))
 
 ;; creates a parser that consumes 1 char if it satisfies predicate p?
 (define (satisfy p?)
   (match-lambda 
-   [(State input pos)
+   [(State input pos user)
     (if (str-empty? input)
         (Empty (Error (Msg pos "end of input" null)))
         (let ([c (str-fst input)]
               [cs (str-rst input)])
           (if (p? c)
               (let* ([new-pos (incr-pos pos c)]
-                     [new-state (State cs new-pos)])
+                     [new-state (State cs new-pos user)])
                 (Consumed (Ok c new-state (Msg new-pos "" null))))
               (Empty (Error (Msg pos (mk-string c) null))))))]))
 
@@ -189,7 +190,7 @@
 ;; Parse p and return the result, but don't consume input.
 (define (lookAhead p)
   (match-lambda
-    [(and input (State inp pos))
+    [(and input (State inp pos _))
      (match (p input)
        [(Consumed! (Ok result _ (Msg _ str strs)))
         (Empty (Ok result input (Msg pos inp strs)))]
@@ -204,7 +205,7 @@
 
 (define (<!> p [q $anyChar]) 
   (match-lambda 
-    [(and state (State inp pos))
+    [(and state (State inp pos _))
      (match (p state)
        [(Consumed! (Ok res _ _))
         (Empty (Error (Msg pos (thunk (result->str res)) 
@@ -213,7 +214,7 @@
 
 (define (notFollowedBy p)
   (match-lambda
-    [(and state (State inp pos))
+    [(and state (State inp pos _))
      (match (p state)
        [(Consumed! (Ok res _ _))
         (Empty (Error (Msg pos (thunk (result->str res)) 
@@ -311,7 +312,7 @@
   (<?>
    (λ (state)
      (match state
-       [(State inp pos)
+       [(State inp pos _)
         (if (str-empty? inp) 
             (Empty (Ok null state (Msg pos "" null)))
             (Empty (Error (Msg pos "non-empty input" null))))]))
@@ -331,7 +332,7 @@
 
 ;; errors have to be printed ~s, otherwise newlines get messed up
 (define (parse p inp) 
-  (match (p (State inp (start-pos)))
+  (match (p (State inp (start-pos) (hasheq)))
     [(Empty (Error (Msg pos msg exp)))
      (parsack-error 
       (format "at ~a\nunexpected: ~s\n  expected: ~s"
@@ -396,4 +397,27 @@
 
 (define (choice ps) (apply <or> ps))
 
+(define (getState key)
+  (match-lambda
+   [(and state (State _ pos user))
+    (Empty (Ok (hash-ref user key #f)
+               state
+               (Msg pos "" null)))]))
 
+(define (setState key val)
+  (match-lambda
+   [(and state (State inp pos user))
+    (Empty (Ok (hash-ref user key #f) ;; "return" original value
+               (State inp pos (hash-set user key val))
+               (Msg pos "" null)))]))
+
+;; Roughly like `parameterize`, but for user state
+(define-syntax (withState stx)
+  (syntax-case stx ()
+    [(_ ([k v] ...) p)
+     (with-syntax ([(orig ...) (generate-temporaries #'(k ...))])
+       (syntax/loc stx
+         (parser-compose (orig <- (setState k v)) ...
+                         (result <- p)
+                         (setState k orig) ...
+                         (return result))))]))
