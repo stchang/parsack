@@ -407,6 +407,17 @@
 (define (setState key val)
   (match-lambda
    [(and state (State inp pos user))
-    (Empty (Ok null
+    (Empty (Ok (hash-ref user key #f) ;; "return" original value
                (State inp pos (hash-set user key val))
                (Msg pos "" null)))]))
+
+;; Roughly like `parameterize`, but for user state
+(define-syntax (withState stx)
+  (syntax-case stx ()
+    [(_ ([k v] ...) p)
+     (with-syntax ([(orig ...) (generate-temporaries #'(k ...))])
+       (syntax/loc stx
+         (parser-compose (orig <- (setState k v)) ...
+                         (result <- p)
+                         (setState k orig) ...
+                         (return result))))]))
