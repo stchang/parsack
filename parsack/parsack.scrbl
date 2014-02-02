@@ -138,6 +138,18 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @defthing[$identifier parser?]{Parsers string containing only numbers, letters, or underscore.}
 
 @;; ---------------------------------------------------------------------------
+@section{User state}
+
+@defproc[(setState [key symbol?] [val any/c]) parser?]{
+  Creates a parser that sets user state and whose result is the prior value of @racket[key] (or @racket[#f] is no value was set).}
+
+@defproc[(getState [key symbol?]) parser?]{
+  Creates a parser whose result is the value for the state of @racket[key] (or @racket[#f] is there no value was set.)}
+
+@defform[(withState ([key value] ...) body-parser ...)]{
+  A form that creates a parser analog of @racket[parameterize], by using @racket[parser-compose] and @racket[setState]. The original value of each @racket[key] is saved, the new value is set for @racket[body-parser], then the original value is restored.}
+
+@;; ---------------------------------------------------------------------------
 @section{Error handling combinators}
 
 @defproc[(try [p parser?]) parser?]{
@@ -156,8 +168,8 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 
 A @deftech{parser} is a function that consumes a @racket[State] and returns either an error, or a @racket[Consumed], or an @racket[Empty].
 
-@defstruct*[State ([str string?] [pos Pos?])]{
-  Input to a parser. Consists of an input string and a position.}
+@defstruct*[State ([str string?] [pos Pos?] [user (hash/c symbol? any/c)])]{
+  Input to a parser. Consists of an input string, a position, and user state.}
 
 @defstruct*[Consumed ([reply (or/c Ok? Error?)])]{
   This is the result of parsing if some input is consumed.}
