@@ -146,8 +146,8 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @defproc[(getState [key symbol?]) parser?]{
   Creates a parser whose result is the value for the state of @racket[key] (or @racket[#f] is there no value was set.)}
 
-@defform[(withState ([key value] ...) body-parser ...)]{
-  A form that creates a parser analog of @racket[parameterize], by using @racket[parser-compose] and @racket[setState]. The original value of each @racket[key] is saved, the new value is set for @racket[body-parser], then the original value is restored.}
+@defform[(withState ([key value] ...) parser)]{
+  A form that creates a parser analog of @racket[parameterize], by using @racket[parser-compose] and @racket[setState]. The original value of each @racket[key] is saved, the new value is set during the evaluation of @racket[parser], then the original value is restored.}
 
 @;; ---------------------------------------------------------------------------
 @section{Error handling combinators}
