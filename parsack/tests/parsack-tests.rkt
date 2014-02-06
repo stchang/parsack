@@ -138,21 +138,21 @@
   (try (parser-one (char #\<) (~> (string name)) (char #\>))))
 (define (close-tag name) 
   (try (parser-one (char #\<) (char #\/) (~> (string name)) (char #\>))))
-(define $li-element 
+(define $li-element ; ok because it uses manyUntil
   (>> (open-tag "li") 
       (manyUntil $anyChar    ; <----- replaced $html-element
                 (<or> (close-tag "li")
                       (lookAhead (<or> (open-tag "li") 
                                        (close-tag "ul") 
                                        (close-tag "ol")))))))
-(define $li-element/manyTill
+(define $li-element/manyTill ; bad -- will error
   (>> (open-tag "li") 
       (manyTill $anyChar    ; <----- replaced $html-element
                 (<or> (close-tag "li")
                       (lookAhead (<or> (open-tag "li") 
                                        (close-tag "ul") 
                                        (close-tag "ol")))))))
-(define $li-element/manyTillany
+(define $li-element/manyTillany ; ok because it uses manyTill #:or <any>
   (>> (open-tag "li") 
       (manyTill $anyChar    ; <----- replaced $html-element
                 (<or> (close-tag "li")
@@ -160,7 +160,7 @@
                                        (close-tag "ul") 
                                        (close-tag "ol"))))
                 #:or <any>)))
-(define $li-element/many
+(define $li-element/many ; ok bc it uses many #:or <any>
   (>> (open-tag "li") 
       (many $anyChar    ; <----- replaced $html-element
             #:till
