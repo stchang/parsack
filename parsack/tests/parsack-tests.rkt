@@ -125,6 +125,73 @@
                    (fmt-err-msg 1 3 3 "t" (list "e")))
 (check-parse-error ((many1Till (string "one") (string "two")) "ontwo")
                    (fmt-err-msg 1 3 3 "t" (list "e")))
+
+;; more manyTill and manyUntil tests
+;; via greghendershott, see https://github.com/stchang/parsack/issues/34
+(check-parse-error ((manyTill $anyChar (lookAhead (char #\X))) "abcX")
+                   (fmt-err-msg 1 5 5 "end of input" (list "X")))
+(check-parsing ((manyUntil $anyChar (lookAhead (char #\X))) "abcX") "abc" "X")
+
+;; html list example
+(define ul-example "<ul><li>Zero</li><li>One<li>Two</ul>")
+(define (open-tag name) 
+  (try (parser-one (char #\<) (~> (string name)) (char #\>))))
+(define (close-tag name) 
+  (try (parser-one (char #\<) (char #\/) (~> (string name)) (char #\>))))
+(define $li-element ; ok because it uses manyUntil
+  (>> (open-tag "li") 
+      (manyUntil $anyChar    ; <----- replaced $html-element
+                (<or> (close-tag "li")
+                      (lookAhead (<or> (open-tag "li") 
+                                       (close-tag "ul") 
+                                       (close-tag "ol")))))))
+(define $li-element/manyTill ; bad -- will error
+  (>> (open-tag "li") 
+      (manyTill $anyChar    ; <----- replaced $html-element
+                (<or> (close-tag "li")
+                      (lookAhead (<or> (open-tag "li") 
+                                       (close-tag "ul") 
+                                       (close-tag "ol")))))))
+(define $li-element/manyTillany ; ok because it uses manyTill #:or <any>
+  (>> (open-tag "li") 
+      (manyTill $anyChar    ; <----- replaced $html-element
+                (<or> (close-tag "li")
+                      (lookAhead (<or> (open-tag "li") 
+                                       (close-tag "ul") 
+                                       (close-tag "ol"))))
+                #:or <any>)))
+(define $li-element/many ; ok bc it uses many #:or <any>
+  (>> (open-tag "li") 
+      (many $anyChar    ; <----- replaced $html-element
+            #:till
+            (<or> (close-tag "li")
+                  (lookAhead (<or> (open-tag "li") 
+                                   (close-tag "ul") 
+                                   (close-tag "ol"))))
+            #:or <any>)))
+(define $ul-element
+  (>> (open-tag "ul")
+      (manyTill $li-element (close-tag "ul"))))
+(define $ul-element/many
+  (>> (open-tag "ul")
+      (many $li-element/many #:till (close-tag "ul"))))
+(define $ul-element/manyTill
+  (>> (open-tag "ul")
+      (manyTill $li-element/manyTill (close-tag "ul"))))
+(define $ul-element/manyTillany
+  (>> (open-tag "ul")
+      (manyTill $li-element/manyTillany (close-tag "ul"))))
+(check-parsings ($ul-element ul-example) "Zero" "One" "Two" "")
+(check-parsings ($ul-element/many ul-example) "Zero" "One" "Two" "")
+(check-parsings ($ul-element/manyTillany ul-example) "Zero" "One" "Two" "")
+(check-parse-error ($ul-element/manyTill ul-example)
+                   (fmt-err-msg 1 37 37 "end of input" (list "<" "<" "<" "<")))
+
+;; many with #:or <any> is weird because of the default (return 0)
+;; it returns right away without consuming input
+(check-empty-parsing ((many $anyChar #:or <any>) "abc") "abc")
+
+
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar") "bar" "")
 (check-parsing ((oneOfStrings "foo" "bar" "baz") "bar___") "bar" "___")
 (check-parse-error ((oneOfStrings "foo" "bar" "baz") "BAR")

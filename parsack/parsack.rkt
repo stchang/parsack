@@ -149,6 +149,8 @@
 (define (>> p q) (>>= p (λ _ q)))
 
 ;; <|> choice combinator
+;; first tries to parse with p, only tries q if p does not consume input
+;; thus, <or> implements "longest match"
 (define (<or>2 p q)
   (λ (state)
     (match (p state)
@@ -173,6 +175,26 @@
 ;; assumes (length args) >= 2
 (define (<or> . args)
   (foldl (λ (p acc) (<or>2 acc p)) (car args) (cdr args)))
+
+;; short-circuiting choice combinator
+;; only tries 2nd parser q if p errors
+;; differs from <or> in the case where p returns (Empty (Ok ...))
+;; - <or> keeps going with q
+;; - but <any> stops
+(define (<any>2 p q)
+  (λ (state)
+    (match (p state)
+      [(Empty (Error msg1))
+       (match (q state)
+         [(Empty (Error msg2)) (mergeError msg1 msg2)]
+         [(Empty (Ok x inp msg2)) (mergeOk x inp msg1 msg2)]
+         [consumed consumed])]
+      [result result])))
+                      
+;; assumes (length args) >= 2
+(define (<any> . args)
+  (foldl (λ (p acc) (<any>2 acc p)) (car args) (cdr args)))
+
 
 (define (option x p) (<or> p (return x)))
 (define (optionMaybe p) (option #f p))
@@ -222,14 +244,17 @@
        [_ (Empty (Ok null state (Msg pos null null)))])]))
 
 ;; parse with p 0 or more times
-(define (many p) 
-  (<or> (parser-cons p (many p)) 
-        (return null)))
+;; some notes:
+;; - default #:till can be (return <anything>), just needs to not consume input
+;; - using many with #:or <any> and the default #:till will immediately return
+;;   empty result without consuming input
+(define (many p #:till [end (return 0)] #:or [<or> <or>]) 
+  (<or> (>> end (return null))
+        (parser-cons p (many p #:till end #:or <or>))))
 
 ;; parse with p 1 or more times
-(define (many1 p)
-  (parser-cons p (<or> (many1 p)
-                       (return null))))
+(define (many1 p #:till [end (return null)] #:or [<or> <or>])
+  (parser-cons p (many p #:till end #:or <or>)))
 
 (define (skipMany p) 
   (<or> (parser-compose p (skipMany p))
@@ -237,15 +262,16 @@
 (define (skipMany1 p) (parser-compose p (skipMany p)))
 
 ;; applies parser p zero or more times until parser end succeeds
-(define (manyTill p end)
-  (<or> (>> end (return null))
-        (parser-cons p (manyTill p end))))
+(define (manyTill p end #:or [<or> <or>])
+  (many p #:till end #:or <or>))
 
 ;; applies parser p one or more times until parser end succeeds
-(define (many1Till p end)
-  (parser-compose (x <- p)
-                  (xs <- (manyTill p end))
-                  (return (cons x xs))))
+(define (many1Till p end #:or [<or> <or>])
+  (parser-cons p (manyTill p end #:or <or>)))
+
+;; manyUntil = manyTill #:or <any>
+(define (manyUntil p end) (manyTill p end #:or <any>))
+(define (many1Until p end) (many1Till p end #:or <any>))
 
 (define (sepBy1 p sep) (parser-cons p (many (>> sep p))))
 (define (sepBy p sep) (<or> (sepBy1 p sep) 
