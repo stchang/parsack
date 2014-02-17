@@ -186,23 +186,44 @@ A @deftech{parser} is a function that consumes a @racket[State] and returns eith
 In general, users should use the above combinators to connect parsers and parse results, rather than manipulate these structs directly.
 
 @defstruct*[State ([str string?] [pos Pos?] [user (hash/c symbol? any/c)])]{
-  Input to a parser. Consists of an input string, a position, and arbitrary user state.}
+  Input to a parser. Consists of an input string, a position, and arbitrary user state.
+  
+  The @racket[parse] function turns its input string into a @racket[State] before applying the given parser.}
 
 @defstruct*[Consumed ([reply (or/c Ok? Error? (promise/c Ok?) (promise/c Error?))])]{
   This is the result of parsing if some input is consumed. 
   
-  The parse result may be a delayed computation.}
+  The parse result may be a delayed computation.
+  
+  @examples[#:eval the-eval
+  (parse $letter "abc")
+  (parse (many $letter) "abc123")
+  ((string "ab") (State "ac" (Pos 1 1 1) (hash)))
+  ]}
 
 @defstruct*[Empty ([reply (or/c Ok? Error?)])]{
-  This is the result of parsing if no input is consumed.}
+  This is the result of parsing if no input is consumed.
+  @examples[#:eval the-eval
+  (parse (many $letter) "123")
+  ]}
 
 @defstruct*[Ok ([parsed any/c][rest State?][msg Msg?])]{
   Contains the result of parsing, remaining input, and any error messages. 
   
-  The parse result can be any value and depends on the specific parser that produces the this struct.}
+  The parse result can be any value and depends on the specific parser that produces the this struct.
+  
+@examples[#:eval the-eval
+  (parse $letter "abc")
+  (parse (many $letter) "123")
+  ]}
 
 @defstruct*[Error ([msg Msg?])]{
-  Indicates parse error.}
+  Indicates parse error.
+ 
+  @examples[#:eval the-eval
+  ($letter (State "123" (Pos 1 1 1) (hash)))
+  ]}
+
                                 
 @defstruct*[Msg ([pos Pos?][unexpected (-> string?)][expected (listof (-> string?))])]{
   Indicates parse error. Error message generation is delayed until an exception is thrown.}
