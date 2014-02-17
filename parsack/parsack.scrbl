@@ -19,10 +19,25 @@ Parsec implementation in Racket. See @cite["parsec"].
 @section{Basic parsing functions}
 
 @defproc[(parse [p parser?] [input string?]) (or/c Consumed? Empty?)]{
-  Parses input string @racket[input] with parser @racket[p] and returns a complete @racket[Consumed] or @racket[Emtpy] struct describing the parse result, state, and message.}
+  Parses input string @racket[input] with parser @racket[p] and returns a complete @racket[Consumed] or @racket[Empty] struct describing the parse result, remaining input, and any error messages. 
+                      
+  See @secref{parse-structs} for details about information contained in the parse result. However, in general, users should use combinators below to compose parsers and parse results, rather than directly handle the @racket[Consumed] or @racket[Empty] structs.
+  
+@examples[#:eval the-eval
+  (parse $letter "abc")
+  (parse $letter "123")
+  (parse (many $letter) "abc123")
+  (parse (many $letter) "123")
+  ]}
 
 @defproc[(parse-result [p parser?] [input string?]) any/c]{
-  Parses input string @racket[input] with parser @racket[p] and returns only the the parse result.}
+  Parses input string @racket[input] with parser @racket[p] and returns only the the parse result.
+@examples[#:eval the-eval
+  (parse-result $letter "abc")
+  (parse-result $letter "123")
+  (parse-result (many $letter) "abc123")
+  (parse-result (many $letter) "123")
+  ]}
 
 @;; ---------------------------------------------------------------------------
 @section{Basic parsing combinators/forms}
@@ -164,31 +179,37 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
   Like @racket[$err] but allows custom expected msg.}
           
 @;; ---------------------------------------------------------------------------
-@section{Structs for Parsing}
+@section[#:tag "parse-structs"]{Parse Result Structs}
 
 A @deftech{parser} is a function that consumes a @racket[State] and returns either an error, or a @racket[Consumed], or an @racket[Empty].
 
-@defstruct*[State ([str string?] [pos Pos?] [user (hash/c symbol? any/c)])]{
-  Input to a parser. Consists of an input string, a position, and user state.}
+In general, users should use the above combinators to connect parsers and parse results, rather than manipulate these structs directly.
 
-@defstruct*[Consumed ([reply (or/c Ok? Error?)])]{
-  This is the result of parsing if some input is consumed.}
+@defstruct*[State ([str string?] [pos Pos?] [user (hash/c symbol? any/c)])]{
+  Input to a parser. Consists of an input string, a position, and arbitrary user state.}
+
+@defstruct*[Consumed ([reply (or/c Ok? Error? (promise/c Ok?) (promise/c Error?))])]{
+  This is the result of parsing if some input is consumed. 
+  
+  The parse result may be a delayed computation.}
 
 @defstruct*[Empty ([reply (or/c Ok? Error?)])]{
   This is the result of parsing if no input is consumed.}
 
 @defstruct*[Ok ([parsed any/c][rest State?][msg Msg?])]{
-  Contains the result of parsing, remaining input, and any error messages.}
+  Contains the result of parsing, remaining input, and any error messages. 
+  
+  The parse result can be any value and depends on the specific parser that produces the this struct.}
 
 @defstruct*[Error ([msg Msg?])]{
   Indicates parse error.}
                                 
 @defstruct*[Msg ([pos Pos?][unexpected (-> string?)][expected (listof (-> string?))])]{
-  Indicates parse error. Error message generation is delayed until an exception it thrown.}
+  Indicates parse error. Error message generation is delayed until an exception is thrown.}
 
 @defstruct*[Pos ([line exact-nonnegative-integer?]
                  [col exact-nonnegative-integer?]
-                 [ofs exact-nonnegative-integer?])]{
+                 [offset exact-nonnegative-integer?])]{
   Position of parser, with line and column information if it's available. 
   The reported numbers are 1-based.}
 
