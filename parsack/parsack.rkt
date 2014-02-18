@@ -173,8 +173,8 @@
    (Msg pos inp (append exp1 exp2))])
                       
 ;; assumes (length args) >= 1
-(define (<or> . args)
-  (foldl (λ (p acc) (<or>2 acc p)) (car args) (cdr args)))
+(define (<or> p . ps) 
+  (foldl (λ (q acc) (<or>2 acc q)) p ps))
 
 ;; short-circuiting choice combinator
 ;; only tries 2nd parser q if p errors
@@ -421,7 +421,7 @@
      (with-syntax ([(new-p ...) (map add-bind (syntax->list #'(p ...)))])
        #'(parser-seq new-p ... #:combine-with (λ (x) x)))]))
 
-(define (choice ps) (apply <or> ps))
+(define (choice ps) (apply <or> $err ps))
 
 (define (getState key)
   (match-lambda
