@@ -206,7 +206,7 @@ Parsec implementation in Racket. See @cite["parsec"].
          parser?]{
   Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.
                                                
-  Equivalent to @racket[(many p #:till end #:or <or>)].}
+  Equivalent to @racket[(many p #:till end #:or orcomb)].}
 @defproc[(many1Till [p parser?][end parser?]
                     [#:or orcomb (-> parser? ... (or/c Consumed? Empty?)) <or>]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] one or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
