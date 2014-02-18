@@ -191,16 +191,40 @@ Parsec implementation in Racket. See @cite["parsec"].
 
 ]}
 
-@defproc[(many [p parser?]) parser?]{
-  Creates a parser that repeatedly parses with @racket[p] zero or more times.}
+@defproc[(many [p parser?] 
+               [#:till end parser? (return null)]
+               [#:or orcomb (-> parser? ... (or/c Consumed? Empty?)) <or>])
+         parser?]{
+  Creates a parser that repeatedly parses with @racket[p] zero or more times.
+                                               
+  Stops when given @racket[end] parser parses "successfully" where "success" is determined by the given @racket[orcomb] combinator. By default @racket[orcomb] is @racket[<or>] and @racket[end] must consume input to be successful. If @racket[orcomb] is @racket[<any>], then @racket[many] terminates as soon as @racket[end] returns non-error.}
 @defproc[(many1 [p parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] one or more times.}
+
+@defproc[(manyTill [p parser?][end parser?] 
+                   [#:or orcomb (-> parser? ... (or/c Consumed? Empty?)) <or>])
+         parser?]{
+  Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.
+                                               
+  Equivalent to @racket[(many p #:till end #:or <or>)].}
+@defproc[(many1Till [p parser?][end parser?]
+                    [#:or orcomb (-> parser? ... (or/c Consumed? Empty?)) <or>]) parser?]{
+  Creates a parser that repeatedly parses with @racket[p] one or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
+
+@defproc[(manyUntil [p parser?][end parser?]) parser?]{
+  Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] returns non-error, even if @racket[end] consumes no input.
+                                               
+  Equivalent to @racket[(manyTill p end #:or <any>)].}
+@defproc[(many1Until [p parser?][end parser?]) parser?]{
+  Creates a parser that repeatedly parses with @racket[p] one or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] returns non-error, even if @racket[end] consumes no input.
+                                               
+  Equivalent to @racket[(many1Till p end #:or <any>)].}
 
 @subsection{A Basic CSV parser}
 
 Here is an implementation of a basic parser for comma-separated values (CSV).
 
-A cell is any character except a comma or newline.
+A cell consists of any characters except a comma or newline.
 @interaction[#:eval the-eval
   (define $oneCell (many (noneOf ",\n")))]
 
@@ -234,10 +258,6 @@ A CSV string is a series of lines.
   Creates a parser that repeatedly parses with @racket[p] one or more times, where each parse of @racket[p] is separated with a parse of @racket[sep]. Only the results of @racket[p] are returned.}
 @defproc[(endBy [p parser?][end parser?]) parser?]{
   Like @racket[sepBy] except for an extra @racket[end] at the end.}
-@defproc[(manyTill [p parser?][end parser?]) parser?]{
-  Creates a parser that repeatedly parses with @racket[p] zero or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
-@defproc[(many1Till [p parser?][end parser?]) parser?]{
-  Creates a parser that repeatedly parses with @racket[p] one or more times, where parser @racket[end] is tried after each @racket[p] and the parsing ends when @racket[end] succeeds.}
 @defproc[(between [open parser?][close parser?][p parser?]) parser?]{
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
 @defproc[(lookAhead [p parser?]) parser?]{
