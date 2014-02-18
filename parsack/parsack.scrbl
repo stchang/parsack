@@ -40,7 +40,7 @@ Parsec implementation in Racket. See @cite["parsec"].
   ]}
 
 @;; ---------------------------------------------------------------------------
-@section{Basic parsing combinators/forms}
+@section{Basic parsing forms}
 
 @defproc[(return [x any/c]) parser?]{
   Creates a parser that consumes no input and returns @racket[x].
@@ -128,6 +128,9 @@ Parsec implementation in Racket. See @cite["parsec"].
      (parser-one (char #\() (~> $letter) (char #\)))
      "(a)")]}
 
+@;;----------------------------------------------------------------------------
+@section{Basic Combinators}
+
 @defproc[(<or> [p parser?] [q parser?] ...) parser?]{
   Creates a parser that tries the given parsers in order, returning with the result of the first parser that consumes input. Errors if not given at least one parser.
 
@@ -187,13 +190,40 @@ Parsec implementation in Racket. See @cite["parsec"].
     (parse-result (<or> (return null) $digit) "1")]}
 
 ]}
-@;; ---------------------------------------------------------------------------
-@section{Other combinators}
 
 @defproc[(many [p parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] zero or more times.}
 @defproc[(many1 [p parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] one or more times.}
+
+@subsection{A Basic CSV parser}
+
+Here is an implementation of a basic parser for comma-separated values (CSV).
+
+A cell is any character except a comma or newline.
+@interaction[#:eval the-eval
+  (define $oneCell (many (noneOf ",\n")))]
+
+A series of cells are separated by commas. To parse cells, we use two mutually referential parsers.
+
+@interaction[#:eval the-eval
+  (define $cells (parser-cons $oneCell $remainingCells))
+  (define $remainingCells (<or> (>> (char #\,) $cells)
+                                (return null)))]
+
+A line is a series of cells followed by a newline.
+@interaction[#:eval the-eval
+  (define $line (parser-one (~> $cells) $eol))]
+
+A CSV string is a series of lines.
+@interaction[#:eval the-eval
+  (define $csv (many $line))
+  (parse-result $csv "cell1,cell2\ncell3,cell4\n")]
+
+
+@;; ---------------------------------------------------------------------------
+@section{Other combinators}
+
 @defproc[(skipMany [p parser?]) parser?]{
   Creates a parser that repeatedly parses with @racket[p] zero or more times, but does not return the result.}
 @defproc[(skipMany1 [p parser?]) parser?]{
