@@ -172,7 +172,7 @@
   [((Msg _ _ exp1) (Msg pos inp exp2))
    (Msg pos inp (append exp1 exp2))])
                       
-;; assumes (length args) >= 2
+;; assumes (length args) >= 1
 (define (<or> . args)
   (foldl (λ (p acc) (<or>2 acc p)) (car args) (cdr args)))
 

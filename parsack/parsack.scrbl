@@ -42,11 +42,50 @@ Parsec implementation in Racket. See @cite["parsec"].
 @;; ---------------------------------------------------------------------------
 @section{Basic parsing combinators/forms}
 
+@defproc[(return [x any/c]) parser?]{
+  Creates a parser that consumes no input and returns @racket[x].
+  @examples[#:eval the-eval
+    (parse (return "b") "a")]}
+
+@defproc[(>>= [p parser?] [f (-> any/c parser?)]) parser?]{
+  Monadic bind operator for parsers. Creates a parser that first parses with @racket[p], passes the result to @racket[f], then parses with the result of applying @racket[f]. If @racket[p] succeeds and consumes input, the application of @racket[f] is delayed. This avoids space leaks (see @cite["parsec"]).
+  @examples[#:eval the-eval
+    (parse-result 
+     (>>= (char #\() 
+          (λ (skip1) 
+            (>>= $letter 
+                 (λ (x) 
+                   (>>= (char #\)) 
+                        (λ (skip2) 
+                          (return x)))))))
+     "(a)")]}
+
+@defproc[(>> [p parser?] [q parser?]) parser?]{
+  Creates a parser that first parses with @racket[p], ignores the result, then parses with @racket[q]. If @racket[p] consumes input, then parsing with @racket[q] is delayed. Equivalent to @racket[(>>= p (λ (x) q))] where @racket[x] is not in @racket[q].
+  @examples[#:eval the-eval
+    (parse-result 
+     (>> (char #\() 
+         (>>= $letter 
+              (λ (x) 
+                (>> (char #\)) 
+                    (return x)))))
+     "(a)")]}
+
+
 @defform/subs[(parser-compose bind-or-skip ...)
               ([bind-or-skip (x <- parser) parser]
                [parser parser?]
                [x identifier?])]{
-  Composes parsers. Syntactic wrapper for @racket[>>=] operator.}
+  Composes parsers. Syntactic wrapper for a chain of @racket[>>=] operators.
+                                                     
+  @examples[#:eval the-eval
+    (parse-result 
+     (parser-compose (char #\[)
+                     (x <- $letter)
+                     (y <- $letter)
+                     (char #\])
+                     (return (list x y)))
+     "[ab]")]}
 
 @defform/subs[(parser-seq skippable ... maybe-combine)
               ([skippable (~ parser) parser]
@@ -58,33 +97,96 @@ Parsec implementation in Racket. See @cite["parsec"].
 
   The default @racket[combine] function is @racket[list] so @racket[(parser-seq p q)] is syntactically equivalent to @racket[(parser-compose (x <- p) (y <- q) (return (list x y)))].
   
-  Use @racket[parser-seq] instead of @racket[parser-compose] when you don't need the result of any parser other than to return it. Use @racket[parser-compose] when you need the result of one parse to build subsequent parsers, for example when parsing matching html open-close tags, or if you need to do additional processing on the parse result before returning.}
+  Use @racket[parser-seq] instead of @racket[parser-compose] when you don't need the result of any parser other than to return it. Use @racket[parser-compose] when you need the result of one parse to build subsequent parsers, for example when parsing matching html open-close tags, or if you need to do additional processing on the parse result before returning.
+  
+  @examples[#:eval the-eval
+    (parse-result 
+     (parser-seq (~ (char #\[))
+                 $letter 
+                 $letter
+                 (~ (char #\])))
+     "[ab]")]}
 
 @defform/subs[(parser-cons p q)
               ([p parser?] [q parser?])]{
-  Syntactically equivalent to @racket[(parser-seq p q #:combine-with cons)]}
+  Syntactically equivalent to @racket[(parser-seq p q #:combine-with cons)]
+                              
+  @examples[#:eval the-eval
+    (parse-result 
+     (parser-cons $letter (many $letter))
+     "abcde")]}
 
 @defform/subs[(parser-one p ...)
               ([p (~> parser) parser]
                [parser parser?])]{
   Combines parsers but only return the result of the parser wrapped with @racket[~>]. Only one parser may be wrapped with @racket[~>].
 
-  For example, @racket[(parser-one p1 (~> p2) p3)] is syntactically equivalent to @racket[(parser-seq (~ p1) p2 (~ p3) #:combine-with (λ (x) x))], which is equivalent to @racket[(parser-compose p1 (x <- p2) p3 (return x))].}
+  For example, @racket[(parser-one p1 (~> p2) p3)] is syntactically equivalent to @racket[(parser-seq (~ p1) p2 (~ p3) #:combine-with (λ (x) x))], which is equivalent to @racket[(parser-compose p1 (x <- p2) p3 (return x))].
+  
+  @examples[#:eval the-eval
+    (parse-result
+     (parser-one (char #\() (~> $letter) (char #\)))
+     "(a)")]}
 
-@defproc[(>>= [p parser?] [f (-> any/c parser?)]) parser?]{
-  Monadic bind operator. Creates a parser that first parses with @racket[p], passes the result to @racket[f], then parses with the result of applying @racket[f]. If @racket[p] succeeds and consumes input, the application of @racket[f] is delayed. This avoids space leaks (see @cite["parsec"]).}
+@defproc[(<or> [p parser?] [q parser?] ...) parser?]{
+  Creates a parser that tries the given parsers in order, returning with the result of the first parser that consumes input. Errors if not given at least one parser.
 
-@defproc[(>> [p parser?] [q parser?]) parser?]{
-  Creates a parser that first parses with @racket[p], ignores the result, then parses with @racket[q]. If @racket[p] consumes input, then parsing with @racket[q] is delayed. Equivalent to @racket[(>>= p (λ (x) q))] where @racket[x] is not bound in @racket[q].}
+  @examples[#:eval the-eval
+    (parse-result (<or> $letter $digit) "1")]
 
-@defproc[(return [x any/c]) parser?]{
-  Creates a parser that consumes no input and returns @racket[x].}
+  NOTES:
+  @itemize[
+    @item{@racket[<or>] continues to try subsequent parsers so long as each of the previous parsers consumes no input, even if one of the previous parsers returns successfully. Thus @racket[<or>] implements "longest match" (see  @cite["parsec"] for more details).
 
-@defproc[(<or> [p parser?] ...) parser?]{
-  Creates a parser that tries the given parses in order, returning with the first successful result.}
+  @examples[#:eval the-eval
+    (parse-result (<or> (return null) $digit) "1")]}
+
+    @item{See also @racket[<any>], a related parser that immediately returns when it encounters a successful parse, even if the parse consumed no input.
+
+  @examples[#:eval the-eval
+    (parse-result (<any> (return null) $digit) "1")]}
+  
+    @item{But if no parsers consume input, then @racket[<or>] backtracks to return the result of the first success.
+  
+  @examples[#:eval the-eval
+    (parse-result (<or> (return "a") (return "b") (return "c")) "1")]}
+  
+    @item{If one of the given parsers consumes input, and then errors, @racket[<or>] returns immediately with the error.  
+  @examples[#:eval the-eval
+    (parse-result 
+     (<or> (string "ab")
+           (string "ac"))
+     "ac")]
+  Use @racket[try] to reset the input on a partial parse.
+  @examples[#:eval the-eval
+    (parse-result 
+     (<or> (try (string "ab"))
+           (string "ac"))
+     "ac")]}
+  ]}
+
 @defproc[(choice [ps (listof parser?)]) parser?]{
   Same as @racket[(apply <or> ps)].}
 
+@defproc[(<any> [p parser?] [q parser?] ...) parser?]{
+  Creates a parser that tries the given parsers in order, returning with the result of the first successful parse, even if no input is consumed. Errors if not given at least one parser. See @racket[<or>] for a related, alternative parser.
+
+  @examples[#:eval the-eval
+    (parse-result (<any> $letter $digit) "1")]
+
+  NOTES:
+  @itemize[
+    @item{@racket[<any>] immediately returns when it encounters a successful parse, even if the parse consumed no input.
+
+  @examples[#:eval the-eval
+    (parse-result (<any> (return null) $digit) "1")]}
+
+  @item{See also @racket[<or>], a related parser that continues to try subsequent parsers so long as each of the previous parsers consumes no input, even if one of the previous parsers returns successfully.
+
+  @examples[#:eval the-eval
+    (parse-result (<or> (return null) $digit) "1")]}
+
+]}
 @;; ---------------------------------------------------------------------------
 @section{Other combinators}
 
