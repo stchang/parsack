@@ -305,7 +305,7 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @defthing[$identifier parser?]{Parsers string containing only numbers, letters, or underscore.}
 
 @;; ---------------------------------------------------------------------------
-@section{User state}
+@section[#:tag "userstate"]{User State}
 
 @defproc[(setState [key symbol?] [val any/c]) parser?]{
   Creates a parser that sets user state and whose result is the prior value of @racket[key] (or @racket[#f] is no value was set).}
@@ -338,7 +338,7 @@ A @deftech{parser} is a function that consumes a @racket[State] and returns eith
 In general, users should use the above combinators to connect parsers and parse results, rather than manipulate these structs directly.
 
 @defstruct*[State ([str string?] [pos Pos?] [user (hash/c symbol? any/c)])]{
-  Input to a parser. Consists of an input string, a position, and arbitrary user state.
+  Input to a parser. Consists of an input string, a position, and arbitrary user state. See @secref{userstate} for more information about the user state.
   
   The @racket[parse] function turns its input string into a @racket[State] before applying the given parser.}
 
