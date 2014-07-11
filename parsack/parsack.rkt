@@ -96,15 +96,21 @@
        [ok ok])))
 
 (define (oneOf str)
-  (ofString (curry char-in-string? str)
+  (ofString (make-char-in-string? str)
             (thunk (string-append "one of: " (str->strs str)))))
+
 (define (noneOf str)
-  (ofString (compose1 not (curry char-in-string? str))
+  (ofString (negate (make-char-in-string? str))
             (thunk (string-append "none of: " (str->strs str)))))
        
-(define (char-in-string? str char) ;; char is last to facilitate currying
-  (for/or ([c (in-string str)])
-    (char=? c char)))
+(define (make-char-in-string? str)
+  ;; `(for/or ([c (in-string str)]))` is slow. A precomputed `seteq`
+  ;; surprisingly isn't that much better. However a precomputed
+  ;; `hasheq` IS significantly faster.
+  (let ([ht (for/hasheq ([c (in-list (string->list str))])
+              (values c #t))])
+    (lambda (c)
+      (hash-ref ht c #f))))
 
 (define (str->strs str)
   (format-exp (map mk-string (string->list str))))
