@@ -1,15 +1,15 @@
 #lang scribble/manual
 @(require scribble/eval
-          (for-label "parsack.rkt"
+          (for-label parsack
                      racket/contract/base
                      (rename-in racket/base [string mk-string])))
 
 @title{Parsec implementation in Racket}
 
 @(define the-eval (make-base-eval))
-@(the-eval '(require "parsack.rkt"))
+@(the-eval '(require parsack))
 
-@defmodule[parsack #:use-sources ("parsack.rkt")]
+@defmodule[parsack]
 
 @author[@author+email["Stephen Chang" "stchang@racket-lang.org"]]
 
