@@ -170,17 +170,28 @@
          [(Empty (Error msg2)) (mergeOk x inp msg1 msg2)]
          [(Empty (Ok _ _ msg2)) (mergeOk x inp msg1 msg2)]
          [consumed consumed])]
-      [consumed consumed])))
+    [consumed consumed])))
 (define (mergeConsumed x inp msg1 msg2) (Consumed (Ok x inp (merge msg1 msg2))))
 (define (mergeOk x inp msg1 msg2) (Empty (Ok x inp (merge msg1 msg2))))
 (define (mergeError msg1 msg2) (Empty (Error (merge msg1 msg2))))
 (define/match (merge msg1 msg2)
   [((Msg _ _ exp1) (Msg pos inp exp2))
    (Msg pos inp (append exp1 exp2))])
-                      
+
 ;; assumes (length args) >= 1
 (define (<or> . args)
-  (foldl (λ (p acc) (<or>2 acc p)) (car args) (cdr args)))
+  (define (start x)
+    ;(with-continuation-mark
+    ; 'feature-profile:parsack-backtracking `("<or>" "first")
+     ((car args) x));)
+  (foldl (λ (p acc)
+            (define (p* x)
+              (with-continuation-mark
+               'feature-profile:parsack-backtracking `("<or>" ,(State-pos x))
+               (p x)))
+            (<or>2 acc p*))
+         start
+         (cdr args)))
 
 ;; short-circuiting choice combinator
 ;; only tries 2nd parser q if p errors
@@ -199,7 +210,7 @@
                       
 ;; assumes (length args) >= 2
 (define (<any> . args)
-  (foldl (λ (p acc) (<any>2 acc p)) (car args) (cdr args)))
+   (foldl (λ (p acc) (<any>2 acc p)) (car args) (cdr args)))
 
 
 (define (option x p) (<or> p (return x)))
