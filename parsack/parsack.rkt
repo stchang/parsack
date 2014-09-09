@@ -181,17 +181,18 @@
 ;; assumes (length args) >= 1
 (define (<or> . args)
   (define (start x)
-    ;(with-continuation-mark
-    ; 'feature-profile:parsack-backtracking `("<or>" "first")
-     ((car args) x));)
-  (foldl (λ (p acc)
-            (define (p* x)
-              (with-continuation-mark
-               'feature-profile:parsack-backtracking `("<or>" ,(State-pos x))
-               (p x)))
-            (<or>2 acc p*))
+    (with-continuation-mark
+     'feature-profile:parsack-backtracking `(<or> 0 ,(State-pos x))
+     ((car args) x)))
+  (foldl (λ (p n acc)
+           (define (p* x)
+             (with-continuation-mark
+              'feature-profile:parsack-backtracking `(<or> ,n ,(State-pos x))
+              (p x)))
+           (<or>2 acc p*))
          start
-         (cdr args)))
+         (cdr args)
+         (range 1 (length args))))
 
 ;; short-circuiting choice combinator
 ;; only tries 2nd parser q if p errors
