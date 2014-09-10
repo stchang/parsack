@@ -180,21 +180,17 @@
    (Msg pos inp (append exp1 exp2))])
 
 (define (<or>* stx . args)
-  (define (print-state state)
-    (format "~a:~a"
-            (Pos-line (State-pos state))
-            (Pos-col (State-pos state))))
   (define (start x)
     (with-continuation-mark
      'feature-profile:parsack-backtracking
-     `(<or> 0 ,(print-state x) ,(build-source-location stx))
+     `(<or> 0 ,(build-source-location stx))
      ((car args) x)))
   (for/fold ([acc start])
             ([p (cdr args)] [n (in-range 1 (length args))])
     (define (p* x)
       (with-continuation-mark
        'feature-profile:parsack-backtracking
-       `(<or> ,n ,(print-state x) ,(build-source-location stx))
+       `(<or> ,n ,(build-source-location stx))
        (p x)))
     (<or>2 acc p*)))
 
