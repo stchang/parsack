@@ -1,6 +1,4 @@
 #lang racket
-
-
 (require feature-profile
          feature-profile/plug-in-lib
          (only-in profile/render-text render)
@@ -23,7 +21,7 @@
                 (for/fold ([table (hash)])
                           ([i items])
                   (match i
-                    [`(,or ,bt ,id) (hash-update table id (λ (x) (max bt x)) bt)]
+                    [`(,or ,bt ,id ...) (hash-update table id (λ (x) (max bt x)) bt)]
                     [else           table])))
               (define intern (make-interner))
               (define post-processed
@@ -32,12 +30,17 @@
                   (define processed
                       (for/list ([i c-s])
                         (match i
-                          [`(,or ,bt ,id) #:when (bt . < . (hash-ref nt-b id))
-                           `(bt-<or> ,bt ,id)]
-                          [else i])))
+                          [`(,or ,bt ,md ,sc)
+                           #:when (bt . < . (hash-ref nt-b `(,md ,sc)))
+                           `((bt-<or> ,bt ,md) . ,sc)]
+                          [`(,or ,bt ,md ,sc) `((<or> ,bt ,md) . ,sc)])))
                   (list* (car p-s) (cadr p-s) ; thread id and timestamp
                          (for/list ([v processed])
-                           (intern (cons v #f))))))
+                           (intern v)))))
               ;; Call edge profiler
               (newline) (newline) (displayln "Parsack Backtracking")
-              (render (analyze-samples (cons (feature-report-total-time f-p) post-processed)))))))
+              (render
+               (analyze-samples
+                (cons (feature-report-total-time f-p) post-processed))
+               #:truncate-source 100
+               )))))

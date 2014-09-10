@@ -1,4 +1,5 @@
 #lang racket
+(require syntax/quote syntax/srcloc)
 (require "string-helpers.rkt")
 (require (for-syntax syntax/parse racket/syntax))
 (provide (all-defined-out))
@@ -170,7 +171,7 @@
          [(Empty (Error msg2)) (mergeOk x inp msg1 msg2)]
          [(Empty (Ok _ _ msg2)) (mergeOk x inp msg1 msg2)]
          [consumed consumed])]
-    [consumed consumed])))
+      [consumed consumed])))
 (define (mergeConsumed x inp msg1 msg2) (Consumed (Ok x inp (merge msg1 msg2))))
 (define (mergeOk x inp msg1 msg2) (Empty (Ok x inp (merge msg1 msg2))))
 (define (mergeError msg1 msg2) (Empty (Error (merge msg1 msg2))))
@@ -178,21 +179,32 @@
   [((Msg _ _ exp1) (Msg pos inp exp2))
    (Msg pos inp (append exp1 exp2))])
 
-;; assumes (length args) >= 1
-(define (<or> . args)
+(define (<or>* stx . args)
+  (define (print-state state)
+    (format "~a:~a"
+            (Pos-line (State-pos state))
+            (Pos-col (State-pos state))))
   (define (start x)
     (with-continuation-mark
-     'feature-profile:parsack-backtracking `(<or> 0 ,(State-pos x))
+     'feature-profile:parsack-backtracking
+     `(<or> 0 ,(print-state x) ,(build-source-location stx))
      ((car args) x)))
-  (foldl (λ (p n acc)
-           (define (p* x)
-             (with-continuation-mark
-              'feature-profile:parsack-backtracking `(<or> ,n ,(State-pos x))
-              (p x)))
-           (<or>2 acc p*))
-         start
-         (cdr args)
-         (range 1 (length args))))
+  (for/fold ([acc start])
+            ([p (cdr args)] [n (in-range 1 (length args))])
+    (define (p* x)
+      (with-continuation-mark
+       'feature-profile:parsack-backtracking
+       `(<or> ,n ,(print-state x) ,(build-source-location stx))
+       (p x)))
+    (<or>2 acc p*)))
+
+;; assumes (length args) >= 1
+(define-syntax (<or> stx)
+  (syntax-parse stx
+    [(_ args ...)
+     #`(<or>* (quote-syntax/keep-srcloc #,stx) args ...)]
+     [s #:when (identifier? #'s)
+        #`(λ x (apply <or>* (quote-syntax/keep-srcloc #,stx) x))]))
 
 ;; short-circuiting choice combinator
 ;; only tries 2nd parser q if p errors
@@ -211,7 +223,7 @@
                       
 ;; assumes (length args) >= 2
 (define (<any> . args)
-   (foldl (λ (p acc) (<any>2 acc p)) (car args) (cdr args)))
+  (foldl (λ (p acc) (<any>2 acc p)) (car args) (cdr args)))
 
 
 (define (option x p) (<or> p (return x)))
