@@ -21,7 +21,7 @@
                 (for/fold ([table (hash)])
                           ([i items])
                   (match i
-                    [`(,or ,bt ,id) (hash-update table id (λ (x) (max bt x)) bt)]
+                    [`(,or ,bt ,id ...) (hash-update table id (λ (x) (max bt x)) bt)]
                     [else           table])))
               (define intern (make-interner))
               (define post-processed
@@ -30,10 +30,10 @@
                   (define processed
                       (for/list ([i c-s])
                         (match i
-                          [`(,or ,bt ,sc)
-                           #:when (bt . < . (hash-ref nt-b sc))
+                          [`(,or ,bt ,md ,sc)
+                           #:when (bt . < . (hash-ref nt-b `(,md ,sc)))
                            `((bt-<or> ,bt) . ,sc)]
-                          [`(,or ,bt ,sc) `((<or> ,bt) . ,sc)])))
+                          [`(,or ,bt ,md ,sc) `((<or> ,bt) . ,sc)])))
                   (list* (car p-s) (cadr p-s) ; thread id and timestamp
                          (for/list ([v processed])
                            (intern v)))))

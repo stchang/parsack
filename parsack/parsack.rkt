@@ -183,14 +183,14 @@
   (define (start x)
     (with-continuation-mark
      'feature-profile:parsack-backtracking
-     `(<or> 0 ,(build-source-location stx))
+     `(<or> 0 ,(State-pos x) ,(build-source-location stx))
      ((car args) x)))
   (for/fold ([acc start])
             ([p (cdr args)] [n (in-range 1 (length args))])
     (define (p* x)
       (with-continuation-mark
        'feature-profile:parsack-backtracking
-       `(<or> ,n ,(build-source-location stx))
+       `(<or> ,n ,(State-pos x) ,(build-source-location stx))
        (p x)))
     (<or>2 acc p*)))
 
