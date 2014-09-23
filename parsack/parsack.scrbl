@@ -72,7 +72,7 @@ Parsec implementation in Racket. See @cite["parsec"].
      "(a)")]}
 
 
-@defform/subs[(parser-compose bind-or-skip ...)
+@defform/subs[(parser-compose bind-or-skip ...+)
               ([bind-or-skip (x <- parser) parser]
                [parser parser?]
                [x identifier?])]{
