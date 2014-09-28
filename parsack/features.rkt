@@ -1,8 +1,8 @@
 #lang racket
 (require feature-profile
          feature-profile/plug-in-lib
-         (only-in profile/render-text render)
-         (only-in profile/analyzer    analyze-samples))
+         profile/analyzer
+         (only-in profile/render-text render))
 
 (provide (all-defined-out))
 
@@ -38,6 +38,24 @@
                          (for/list ([v processed])
                            (intern v)))))
               ;; Call edge profiler
+              (define analyzed
+                (analyze-samples
+                 (cons (feature-report-total-time f-p) post-processed)))
+
+              (define analyzed/filtered
+                (sort
+                 (for/fold ([l '()])
+                     ([n (profile-nodes analyzed)])
+                   (match (node-id n)
+                     [`(bt-<or> . ,rest) (cons n l)]
+                     [else               l]))
+                 (λ (x y) ((node-total x) . > . (node-total y)))))
+
+              ;; Render results
               (newline) (newline) (displayln "Parsack Backtracking")
-              (render (analyze-samples
-                       (cons (feature-report-total-time f-p) post-processed)))))))
+              (for ([i analyzed/filtered])
+                (printf "~a / ~a\t~a\t~a~n"
+                        (node-total i)
+                        (feature-report-total-time f-p)
+                        (srcloc->string (node-src i))
+                        (cadr (node-id i))))))))
