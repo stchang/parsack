@@ -199,8 +199,8 @@
   (syntax-parse stx
     [(_ args ...)
      #`(<or>* (quote-syntax/keep-srcloc #,stx) args ...)]
-     [s #:when (identifier? #'s)
-        #`(λ x (apply <or>* (quote-syntax/keep-srcloc #,stx) x))]))
+     [s:id
+      #`(λ x (apply <or>* (quote-syntax/keep-srcloc #,stx) x))]))
 
 ;; short-circuiting choice combinator
 ;; only tries 2nd parser q if p errors
