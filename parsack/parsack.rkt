@@ -1,4 +1,5 @@
 #lang racket
+(require syntax/quote syntax/srcloc)
 (require "string-helpers.rkt")
 (require (for-syntax syntax/parse racket/syntax))
 (provide (all-defined-out))
@@ -177,10 +178,29 @@
 (define/match (merge msg1 msg2)
   [((Msg _ _ exp1) (Msg pos inp exp2))
    (Msg pos inp (append exp1 exp2))])
-                      
+
+(define (<or>* stx . args)
+  (define (start x)
+    (with-continuation-mark
+     'feature-profile:parsack-backtracking
+     `(<or> 0 ,(State-pos x) ,(build-source-location stx))
+     ((car args) x)))
+  (for/fold ([acc start])
+            ([p (cdr args)] [n (in-range 1 (length args))])
+    (define (p* x)
+      (with-continuation-mark
+       'feature-profile:parsack-backtracking
+       `(<or> ,n ,(State-pos x) ,(build-source-location stx))
+       (p x)))
+    (<or>2 acc p*)))
+
 ;; assumes (length args) >= 1
-(define (<or> . args)
-  (foldl (λ (p acc) (<or>2 acc p)) (car args) (cdr args)))
+(define-syntax (<or> stx)
+  (syntax-parse stx
+    [(_ args ...)
+     #`(<or>* (quote-syntax/keep-srcloc #,stx) args ...)]
+     [s:id
+      #`(λ x (apply <or>* (quote-syntax/keep-srcloc #,stx) x))]))
 
 ;; short-circuiting choice combinator
 ;; only tries 2nd parser q if p errors
