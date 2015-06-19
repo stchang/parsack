@@ -78,11 +78,10 @@
    [(State input pos user)
     (if (str-empty? input)
         (Empty (Error (Msg pos "end of input" null)))
-        (let ([c (str-fst input)]
-              [cs (str-rst input)])
+        (let ([c (str-fst input)])
           (if (p? c)
               (let* ([new-pos (incr-pos pos c)]
-                     [new-state (State cs new-pos user)])
+                     [new-state (State (str-rst input) new-pos user)])
                 (Consumed (Ok c new-state (Msg new-pos "" null))))
               (Empty (Error (Msg pos (mk-string c) null))))))]))
 
@@ -107,7 +106,7 @@
   ;; `(for/or ([c (in-string str)]))` is slow. A precomputed `seteq`
   ;; surprisingly isn't that much better. However a precomputed
   ;; `hasheq` IS significantly faster.
-  (let ([ht (for/hasheq ([c (in-list (string->list str))])
+  (let ([ht (for/hasheqv ([c (in-string str)])
               (values c #t))])
     (lambda (c)
       (hash-ref ht c #f))))
