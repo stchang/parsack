@@ -29,4 +29,4 @@
 
 
 (define (csvFile filename)
-  (parse $csv (with-input-from-file filename port->string)))
+  (parse $csv filename #;(with-input-from-file filename port->string)))

@@ -4,64 +4,73 @@
 (provide (all-defined-out))
 
 (define-syntax-rule (force-Consumed (p inp))
-  (let ([res (parse p inp)])
+  (let ([res (parse p (open-input-string inp))])
     (if (Consumed? res)
         (struct-copy Consumed res [reply (force (Consumed-reply res))])
         res)))
 (define-syntax (check-parsing stx) 
   (syntax-case stx ()
-    [(_ e parsed rst)
-     #`(match (force-Consumed e)
-         [(Consumed (Ok consumed (State remaining pos _) (Msg pos2 msg exp)))
+    [(_ (p input-str) parsed rst)
+     #`(let ([in (open-input-string input-str)])
+         (match (parse p in)
+         [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos2 msg exp)))
           (if (list? consumed) ; if not list, then it's a single char
               #,(syntax/loc #'parsed 
-                  (check-equal? consumed (string->list parsed)))
+                  (check-equal? consumed (string->list parsed)
+                                "parsing result does not match expected"))
               (begin #,(syntax/loc #'parsed 
                          (check-equal? (length (string->list parsed)) 1))
                      #,(syntax/loc #'parsed
                          (check-equal? consumed (car (string->list parsed))))))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string in) rst
+                                            "remaining input does't not match expected"))]))]))
 (define-syntax (check-parsings stx)
   (syntax-case stx ()
-    [(_ e parsed ... rst)
-     #`(match (force-Consumed e)
-         [(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
+    [(_ (p input-str) parsed ... rst)
+     #`(let ([in (open-input-string input-str)])
+         (match (parse p in) #;(force-Consumed e)
+         [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
           #,(syntax/loc (car (syntax->list #'(parsed ...)))
               (check-equal? consumed (list (string->list parsed) ...)))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string in) rst
+                                            "remaining input does't not match expected"))]))]))
 (define-syntax (check-line-parsings stx)
   (syntax-case stx ()
-    [(_ e (x ...) ... rst)
-     #`(match (force-Consumed e)
-         [(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
+    [(_ (p input-str) (x ...) ... rst)
+     #`(let ([in (open-input-string input-str)])
+         (match (parse p in) #;(force-Consumed e)
+         [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
           #,(syntax/loc (car (syntax->list (car (syntax->list #'((x ...) ...)))))
               (check-equal? consumed (list (list (string->list x) ...) ...)))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string in) rst
+                                            "remaining input does't not match expected"))]))]))
 (define-syntax (check-empty-parsing stx)
   (syntax-case stx ()
-    [(_ e rst) (syntax/loc stx (check-empty-parsing e "" rst))]
-    [(_ e parsed rst)
-     #`(match (force-Consumed e)
-         [(Empty (Ok result (State remaining pos _) (Msg pos msg exp)))
+    [(_ e rst) (syntax/loc stx (check-parsing e "" rst) #;(check-empty-parsing e "" rst))]
+    #;[(_ (p input-str) parsed rst)3
+     #`(let ([in (open-input-string input-str)])
+         (match (p in) #;(force-Consumed e)
+         [result #;(Empty (Ok result (State remaining pos _) (Msg pos msg exp)))
           (if (list? result)
               #,(syntax/loc #'parsed (check-equal? result (string->list parsed)))
               (begin #,(syntax/loc #'parsed 
                          (check-equal? (length (string->list parsed)) 1))
                      #,(syntax/loc #'parsed 
                          (check-equal? result (car (string->list parsed))))))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? remaining rst))]))]))
 (define-syntax (check-parse-error stx)
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-parse-error e ""))]
-    [(_ e msg)
+    [(_ (p input-str) msg)
      (quasisyntax/loc stx
        (check-exn exn:fail:parsack? 
          (thunk
           (with-handlers 
             ([exn:fail:parsack? (λ (x) 
-                          #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
+                          #,(syntax/loc #'msg (check-equal? (exn-message x) msg
+                                                            "err msg doesn't match expected"))
                           (raise x))])
-            (force-Consumed e)))))]))
+            (with-input-from-string input-str (curry parse p)) #;(force-Consumed e)))))]))
 (define-syntax (check-partial-parse-error stx)
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-partial-parse-error e ""))]
@@ -71,7 +80,8 @@
          (thunk
           (with-handlers 
             ([exn:fail:parsack? (λ (x) 
-                                  #,(syntax/loc #'msg (check-equal? (exn-message x) msg))
+                                  #,(syntax/loc #'msg (check-equal? (exn-message x) msg
+                                                                    "err msg doesn't match expected"))
                                   (raise x))])
             (force-Consumed e)))))]))
 
