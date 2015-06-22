@@ -54,8 +54,14 @@
 (struct Ok (parsed rest msg) #:transparent)
 (struct Error (msg) #:transparent)
 
+(define (err expected)
+  (λ (in)
+    (current-unexpected (thunk (port->string in)))
+    (current-expected (list expected))
+    #f))
 (define $err
-  (λ ([in (current-input-port)])
+  (err "")
+  #;(λ (in)
     (current-unexpected (thunk (port->string in)))
     (current-expected null)
     #f)
@@ -86,7 +92,7 @@
 
 ;; creates a Parser that consumes no input and returns x
 (define (return x)
-  (λ ([in (current-input-port)])
+  (λ (in)
     x)
   #;(match-lambda 
     [(and state (State _ pos _))
@@ -94,7 +100,7 @@
 
 ;; creates a parser that consumes 1 char if it satisfies predicate p?
 (define (satisfy p?)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define c (peek-char in))
     (cond
       [(eof-object? c)
@@ -121,7 +127,7 @@
               (Empty (Error (Msg pos (mk-string c) null))))))]))
 
 (define (ofString ? err)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define x/#f ((satisfy ?) in))
     (unless x/#f (current-expected (cons err (current-expected))))
     x/#f)
@@ -171,7 +177,7 @@
 ;;   parsing from f
 ;; - if p returns #f, do not continue with f
 (define (>>= p f)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define pos (file-position in))
     (define p-result/#f (p in))
     (if p-result/#f
@@ -212,7 +218,7 @@
 ;; first tries to parse with p, only tries q if p does not consume input
 ;; thus, <or> implements "longest match"
 (define (<or>2 p q)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define pos (file-position in))
     (define p-result/#f (p in))
     (if (= (file-position in) pos)
@@ -254,7 +260,7 @@
 ;; - <or>: parse with q
 ;; - <any>: stops
 (define (<any>2 p q)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define pos (file-position in))
     (define result/#f (p in))
     (if (and (not result/#f) (= pos (file-position in)))
@@ -287,7 +293,7 @@
 
 ;; tries to parse with p but backtracks and does not consume input if error
 (define (try p)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define in/peek (peeking-input-port in))
     (define result/#f (p in/peek))
     (if result/#f
@@ -302,7 +308,7 @@
 
 ;; Parse p and return the result, but don't consume input.
 (define (lookAhead p)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (p (peeking-input-port in)))
   #;(match-lambda
     [(and input (State inp pos _))
@@ -319,7 +325,7 @@
         [else res]))
 
 (define (<!> p [q $anyChar])
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define in/peek (peeking-input-port in))
     (define result/#f (p in/peek))
     (cond
@@ -338,7 +344,7 @@
 
 ;; succeeds when p fails; does not consume input
 (define (notFollowedBy p)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define result/#f (p (peeking-input-port in)))
     (cond
       [result/#f
@@ -400,7 +406,7 @@
 ;; Creates a Parser that parses with p, using exp as the expected input.
 ;; TODO: why is exp not merged?
 (define (<?> p exp)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define pos (file-position in))
     (define result/#f (p in))
     (when (= pos (file-position in)) (current-expected (list exp)))
@@ -451,7 +457,6 @@
                      (string* (str-rst str) p))))
 ;; Parser P must parse successfully with each c
 (define (chars cs p)
-;  (λ ([in (current-input-port)])
   (if (null? cs)
       (return null)
       (parser-cons (p (car cs)) (chars (rest cs) p))))
@@ -463,7 +468,7 @@
 ;; parser that only succeeds on empty input
 (define $eof
   (<?>
-   (λ ([in (current-input-port)])
+   (λ (in)
      (define c (peek-char in))
      (cond
        [(eof-object? c)
@@ -586,7 +591,7 @@
 (define (choice ps) (apply <or> ps))
 
 (define (getState key)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define val (hash-ref (user-state) key #f))
     (current-unexpected "")
     (current-expected null)
@@ -598,7 +603,7 @@
                (Msg pos "" null)))]))
 
 (define (setState key val)
-  (λ ([in (current-input-port)])
+  (λ (in)
     (define current-val (hash-ref (user-state) key 'key-not-set))
     (current-unexpected "")
     (current-expected null)
