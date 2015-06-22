@@ -42,7 +42,12 @@
 ;; - if it's a number, return it
 ;; - if it's not a number, don't consume any input
 (define $p_number
-  (λ (state)
+  (λ (in)
+    (define n (read (peeking-input-port in)))
+    (if (number? n)
+        (read in)
+        #f))
+  #;(λ (state)
     (define s (State-str state))
     (define p (open-input-string s))
     (define n (read p))

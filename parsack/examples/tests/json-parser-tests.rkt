@@ -7,7 +7,8 @@
 (define-syntax (check-parse stx)
   (syntax-case stx ()
     [(_ p n)
-     #`(match p
+     (syntax/loc #'n (check-equal? p n))
+     #;#`(match p
          [(Consumed! (Ok consumed _ _))
           #,(syntax/loc #'n (check-equal? consumed n))])]))
 
@@ -19,7 +20,7 @@
                            (JBool #t)
                            (JNull)
                            (JString "a string"))))
-(check-parse (parse $p_text "{\"numbers\": [1,2,3,4,5], \"useful\": false}")
+#;(check-parse (parse $p_text "{\"numbers\": [1,2,3,4,5], \"useful\": false}")
              (JObject (list (cons "numbers" (JArray (list (JNumber 1)
                                                           (JNumber 2)
                                                           (JNumber 3)

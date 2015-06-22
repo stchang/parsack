@@ -305,11 +305,11 @@
   (λ (in)
     (define in/peek (peeking-input-port in))
     (define result/#f (p in/peek))
-    (if result/#f
-        (begin
-          (read-bytes (file-position in/peek) in)
-          result/#f)
-        #f))
+    (cond
+      [result/#f
+       (read-bytes (file-position in/peek) in)
+       result/#f]
+      [else #f]))
   #;(λ (state)
     (match (p state)
       [(Consumed! (Error msg)) (Empty (Error msg))]
