@@ -47,8 +47,9 @@
 (define-syntax (check-empty-parsing stx)
   (syntax-case stx ()
     [(_ e rst) (syntax/loc stx (check-parsing e "" rst) #;(check-empty-parsing e "" rst))]
-    #;[(_ (p input-str) parsed rst)3
-     #`(let ([in (open-input-string input-str)])
+    [(_ e parsed rst)
+     (syntax/loc stx (check-parsing e parsed rst))
+     #;#`(let ([in (open-input-string input-str)])
          (match (p in) #;(force-Consumed e)
          [result #;(Empty (Ok result (State remaining pos _) (Msg pos msg exp)))
           (if (list? result)
