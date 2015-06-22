@@ -20,7 +20,7 @@
                          (check-equal? (length (string->list parsed)) 1))
                      #,(syntax/loc #'parsed
                          (check-equal? consumed (car (string->list parsed))))))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string remaining) rst))])]))
 (define-syntax (check-parsings stx)
   (syntax-case stx ()
     [(_ e parsed ... rst)
@@ -28,7 +28,7 @@
          [(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
           #,(syntax/loc (car (syntax->list #'(parsed ...)))
               (check-equal? consumed (list (string->list parsed) ...)))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string remaining) rst))])]))
 (define-syntax (check-line-parsings stx)
   (syntax-case stx ()
     [(_ e (x ...) ... rst)
@@ -36,7 +36,7 @@
          [(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
           #,(syntax/loc (car (syntax->list (car (syntax->list #'((x ...) ...)))))
               (check-equal? consumed (list (list (string->list x) ...) ...)))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string remaining) rst))])]))
 (define-syntax (check-empty-parsing stx)
   (syntax-case stx ()
     [(_ e rst) (syntax/loc stx (check-empty-parsing e "" rst))]
@@ -49,7 +49,7 @@
                          (check-equal? (length (string->list parsed)) 1))
                      #,(syntax/loc #'parsed 
                          (check-equal? result (car (string->list parsed))))))
-          #,(syntax/loc #'rst (check-equal? remaining rst))])]))
+          #,(syntax/loc #'rst (check-equal? (port->string remaining) rst))])]))
 (define-syntax (check-parse-error stx)
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-parse-error e ""))]

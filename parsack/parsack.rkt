@@ -13,10 +13,10 @@
 ;; A [Parser X] is a function: State -> [Consumed X]
 ;;   where X = the type of the parsed output
 
-;; A State is a (State String Pos UserState)
+;; A State is a (State InputPort Pos UserState)
 ;; - parsers consume a State
-(struct State (str pos user) #:transparent)
-;; where str = input
+(struct State (in pos user) #:transparent)
+;; where In = InputPort
 ;;       pos = Pos
 ;;       user = UserState
 
@@ -41,7 +41,7 @@
 (struct Error (msg) #:transparent)
 
 (define $err 
-  (match-lambda [(State inp pos _) (Empty (Error (Msg pos inp null)))]))
+  (match-lambda [(State inp pos _) (Empty (Error (Msg pos (port->string inp) null)))]))
 
 (struct exn:fail:parsack exn:fail ())
 
@@ -75,6 +75,16 @@
 ;; creates a parser that consumes 1 char if it satisfies predicate p?
 (define (satisfy p?)
   (match-lambda 
+   [(State input pos user)
+    (define c (peek-char input))
+    (if (eof-object? c)
+        (Empty (Error (Msg pos "end of input" null)))
+        (if (p? c)
+            (let* ([new-pos (incr-pos pos c)])
+              (read-char input) ; commit peek
+              (Consumed (Ok c (State input new-pos user) (Msg new-pos "" null))))
+            (Empty (Error (Msg pos (mk-string c) null)))))])
+  #;(match-lambda 
    [(State input pos user)
     (if (str-empty? input)
         (Empty (Error (Msg pos "end of input" null)))
@@ -209,31 +219,43 @@
 
 ;; tries to parse with p but backtracks and does not consume input if error
 (define (try p)
-  (λ (state)
-    (match (p state)
-      [(Consumed! (Error msg)) (Empty (Error msg))]
-      [other other])))
+  (match-lambda
+    [(and state (State inp pos msg))
+     (define in/peek (peeking-input-port inp))
+     (match (p (State in/peek pos msg))
+       [(Consumed! (Error msg)) (Empty (Error msg))]
+       [other
+        (define-values (r c pos) (port-next-location inp))
+        (define-values (r+ c+ pos+) (port-next-location in/peek))
+        (set-port-next-location! inp #f #f (+ pos (sub1 pos+)))
+        other])]))
 
 ;; Parse p and return the result, but don't consume input.
 (define (lookAhead p)
   (match-lambda
-    [(and input (State inp pos _))
-     (match (p input)
+    [(and input (State inp pos msg))
+     (define in/peek (peeking-input-port inp))
+     (match (p (State in/peek pos msg))
        [(Consumed! (Ok result _ (Msg _ str strs)))
         (Empty (Ok result input (Msg pos inp strs)))]
-       [emp emp])]))
+       [emp
+        (define-values (r c pos) (port-next-location inp))
+        (define-values (r+ c+ pos+) (port-next-location in/peek))
+        (set-port-next-location! inp #f #f (+ pos (sub1 pos+)))
+        emp])]))
 
 ;; converts intermediate parse result to string -- for err purposes
 ;; Note: Efficiency of this matters, do dont call until throwing the exception
 (define (result->str res)
   (cond [(char? res) (mk-string res)]
+        
         [(and (list? res) (andmap char? res)) (list->string res)]
         [else res]))
 
 (define (<!> p [q $anyChar]) 
   (match-lambda 
-    [(and state (State inp pos _))
-     (match (p state)
+    [(and state (State inp pos msg))
+     (match (p (State (peeking-input-port inp) pos msg))
        [(Consumed! (Ok res _ _))
         (Empty (Error (Msg pos (thunk (result->str res)) 
                            (list (thunk (format "not: ~a" (result->str res)))))))]
@@ -241,8 +263,8 @@
 
 (define (notFollowedBy p)
   (match-lambda
-    [(and state (State inp pos _))
-     (match (p state)
+    [(and state (State inp pos msg))
+     (match (p (State (peeking-input-port inp) pos msg))
        [(Consumed! (Ok res _ _))
         (Empty (Error (Msg pos (thunk (result->str res)) 
                            (list (thunk (format "not: ~a" (result->str res)))))))]
@@ -344,7 +366,8 @@
    (λ (state)
      (match state
        [(State inp pos _)
-        (if (str-empty? inp) 
+        (define c (peek-char inp))
+        (if (eof-object? c)
             (Empty (Ok null state (Msg pos "" null)))
             (Empty (Error (Msg pos "non-empty input" null))))]))
    "end-of-file"))
@@ -363,7 +386,7 @@
 
 ;; errors have to be printed ~s, otherwise newlines get messed up
 (define (parse p inp) 
-  (match (p (State inp (start-pos) (hasheq)))
+  (match (p (State (open-input-string inp) (start-pos) (hasheq)))
     [(Empty (Error (Msg pos msg exp)))
      (parsack-error 
       (format "at ~a\nunexpected: ~s\n  expected: ~s"
