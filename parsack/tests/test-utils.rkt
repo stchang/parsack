@@ -30,8 +30,9 @@
      #`(let ([in (open-input-string input-str)])
          (match (parse p in) #;(force-Consumed e)
          [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
+                   (let ([consumed (force consumed)])
           #,(syntax/loc (car (syntax->list #'(parsed ...)))
-              (check-equal? consumed (list (string->list parsed) ...)))
+              (check-equal? consumed (list (string->list parsed) ...))))
           #,(syntax/loc #'rst (check-equal? (port->string in) rst
                                             "remaining input does't not match expected"))]))]))
 (define-syntax (check-line-parsings stx)
@@ -71,7 +72,7 @@
                           #,(syntax/loc #'msg (check-equal? (exn-message x) msg
                                                             "err msg doesn't match expected"))
                           (raise x))])
-            (with-input-from-string input-str (curry parse p)) #;(force-Consumed e)))))]))
+            (force (with-input-from-string input-str (curry parse p))) #;(force-Consumed e)))))]))
 (define-syntax (check-partial-parse-error stx)
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-partial-parse-error e ""))]

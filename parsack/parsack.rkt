@@ -56,14 +56,14 @@
 
 (define (err expected)
   (λ (in)
-    (current-unexpected (thunk (port->string in)))
-    (current-expected (list expected))
+    ;(current-unexpected (thunk (port->string in)))
+    ;(current-expected (list expected))
     #f))
 (define $err
   (err "")
   #;(λ (in)
-    (current-unexpected (thunk (port->string in)))
-    (current-expected null)
+    ;(current-unexpected (thunk (port->string in)))
+    ;(current-expected null)
     #f)
   #;(match-lambda [(State inp pos _) (Empty (Error (Msg pos inp null)))]))
 
@@ -104,16 +104,16 @@
     (define c (peek-char in))
     (cond
       [(eof-object? c)
-       (current-unexpected "end of input")
-       (current-expected null)
+       ;(current-unexpected "end of input")
+       ;(current-expected null)
        #f]
       [(p? c)
-       (current-unexpected "")
-       (current-expected null)
+       ;(current-unexpected "")
+       ;(current-expected null)
        (read-char in)]
       [else
-       (current-unexpected (mk-string c))
-       (current-expected null)
+       ;(current-unexpected (mk-string c))
+       ;(current-expected null)
        #f]))
   #;(match-lambda 
    [(State input pos user)
@@ -127,9 +127,11 @@
               (Empty (Error (Msg pos (mk-string c) null))))))]))
 
 (define (ofString ? err)
-  (λ (in)
-    (define x/#f ((satisfy ?) in))
-    (unless x/#f (current-expected (cons err (current-expected))))
+  (satisfy ?)
+  ;(define p (satisfy ?))
+  #;(λ (in)
+    (define x/#f (p #;(satisfy ?) in))
+    ;(unless x/#f (current-expected (cons err (current-expected))))
     x/#f)
   #;(λ (state)
      (match ((satisfy ?) state)
@@ -178,20 +180,27 @@
 ;; - if p returns #f, do not continue with f
 (define (>>= p f)
   (λ (in)
+    (define res (p in))
+    (if res ((f res) in) #f))
+  #;(λ (in)
     (define pos (file-position in))
     (define p-result/#f (p in))
-    (if p-result/#f
-        (let ([saved-expected (current-expected)])
-          (if (= pos (file-position in)) ; p consumed no input
+    (if (= pos (file-position in))
+        (if p-result/#f
+            (let (#;[saved-expected (current-expected)])
               (let ([f-result/#f ((f p-result/#f) in)])
-                (when (= pos (file-position in)) ; f consumed no input
-                  (current-expected (append saved-expected (current-expected))))
-                f-result/#f)
-              (let ([f-result/#f ((f p-result/#f) in)])
-                (when (and (= pos (file-position in)) (not f-result/#f))
-                  (current-expected (append saved-expected (current-expected))))
-                f-result/#f)))
-        #f))
+                #;(when (= pos (file-position in)) ; f consumed no input
+                    (current-expected (append saved-expected (current-expected))))
+                f-result/#f))
+              #f)
+        (lazy
+         (let ([p-result/#f p-result/#f])
+           (if p-result/#f
+               (let ([f-result/#f ((f p-result/#f) in)])
+                 #;(when (and (= pos (file-position in)) (not f-result/#f))
+                     (current-expected (append saved-expected (current-expected))))
+                 f-result/#f)
+               #f)))))
   #;(λ (input)
     (match (p input)
       [(Empty reply)
@@ -222,11 +231,11 @@
     (define pos (file-position in))
     (define p-result/#f (p in))
     (if (= (file-position in) pos)
-        (let ([saved-expected (current-expected)]
+        (let (#;[saved-expected (current-expected)]
               [q-result/#f (q in)])
           (if (= (file-position in) pos)
               (begin
-                (current-expected (append saved-expected (current-expected)))
+                ;(current-expected (append saved-expected (current-expected)))
                 (if p-result/#f p-result/#f q-result/#f))
               q-result/#f))
         p-result/#f))
@@ -265,9 +274,9 @@
     (define result/#f (p in))
     (if (and (not result/#f) (= pos (file-position in)))
         (let ([pos (file-position in)]
-              [saved-expected (current-expected)]
+              ;[saved-expected (current-expected)]
               [q-result/#f (q in)])
-          (when (= pos (file-position in))
+          #;(when (= pos (file-position in))
             (current-expected (append saved-expected (current-expected))))
           q-result/#f)
         result/#f))
@@ -330,8 +339,8 @@
     (define result/#f (p in/peek))
     (cond
       [(and result/#f (not (zero? (file-position in/peek))))
-       (current-unexpected (λ () (result->str result/#f)))
-       (current-expected `(,(λ () (format "not: ~a" (result->str result/#f)))))
+       ;(current-unexpected (λ () (result->str result/#f)))
+       ;(current-expected `(,(λ () (format "not: ~a" (result->str result/#f)))))
        #f]
       [else (q in)]))
   #;(match-lambda 
@@ -348,12 +357,12 @@
     (define result/#f (p (peeking-input-port in)))
     (cond
       [result/#f
-       (current-unexpected (thunk (result->str result/#f)))
-       (current-expected (list (thunk (format "not: ~a" (result->str result/#f)))))
+       ;(current-unexpected (thunk (result->str result/#f)))
+       ;(current-expected (list (thunk (format "not: ~a" (result->str result/#f)))))
        #f]
       [else
-       (current-unexpected "")
-       (current-expected null)
+       ;(current-unexpected "")
+       ;(current-expected null)
        null]))
   #;(match-lambda
     [(and state (State inp pos _))
@@ -406,10 +415,11 @@
 ;; Creates a Parser that parses with p, using exp as the expected input.
 ;; TODO: why is exp not merged?
 (define (<?> p exp)
-  (λ (in)
-    (define pos (file-position in))
+  p
+  #;(λ (in)
+    ;(define pos (file-position in))
     (define result/#f (p in))
-    (when (= pos (file-position in)) (current-expected (list exp)))
+    ;(when (= pos (file-position in)) (current-expected (list exp)))
     result/#f)
   #;(λ (state)
     (match (p state)
@@ -472,11 +482,11 @@
      (define c (peek-char in))
      (cond
        [(eof-object? c)
-         (current-unexpected "")
-         (current-expected null)
+         ;(current-unexpected "")
+         ;(current-expected null)
          null]
-       [else (current-unexpected "non-empty input")
-             (current-expected null)
+       [else ;(current-unexpected "non-empty input")
+             ;(current-expected null)
              #f]))
    #;(λ (state)
      (match state
@@ -509,8 +519,8 @@
   (define result/#f
     (cond [(input-port? inp)
            (port-count-lines! inp)
-           (current-unexpected "")
-           (current-expected null)
+           ;(current-unexpected "")
+           ;(current-expected null)
            (user-state (hasheq))
            (p inp)]
           [(path? inp) (with-input-from-file inp (curry parse p))]
@@ -593,8 +603,8 @@
 (define (getState key)
   (λ (in)
     (define val (hash-ref (user-state) key #f))
-    (current-unexpected "")
-    (current-expected null)
+    ;(current-unexpected "")
+    ;(current-expected null)
     val)
   #;(match-lambda
    [(and state (State _ pos user))
@@ -605,8 +615,8 @@
 (define (setState key val)
   (λ (in)
     (define current-val (hash-ref (user-state) key 'key-not-set))
-    (current-unexpected "")
-    (current-expected null)
+    ;(current-unexpected "")
+    ;(current-expected null)
     (user-state (hash-set (user-state) key val))
     current-val)
   #;(match-lambda
