@@ -71,9 +71,9 @@
    (u <- $url)
    (hs <- $p_headers)
    (b <- body)
-   (return (HttpRequest m (list->string u) hs (list->string b)))))
+   (return (HttpRequest m (list->string u) hs (and b (list->string b))))))
 
 ;; parsers Http Request
 (define $p_request
-  (<or> (q "GET" 'GET (return null)) ; change #f to null, can't parse to #f
+  (<or> (q "GET" 'GET (return #f))
         (q "POST" 'POST (many $anyChar))))

@@ -8,9 +8,8 @@
 (define-syntax (check-query-parse stx)
   (syntax-parse stx
   [(_ p (~seq x y) ...)
-   (syntax/loc stx (check-equal? p (list (cons (string->list x) (string->list y)) ...)))
-   #;#`(match p
-       [(Consumed! (Ok consumed _ _))
+   #`(match p
+       [(Consumed! (Ok consumed))
         #,(syntax/loc stx 
             (check-equal? consumed 
                           (list (cons (string->list x) (string->list y)) ...)))])]))

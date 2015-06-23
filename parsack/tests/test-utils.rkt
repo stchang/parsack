@@ -3,17 +3,16 @@
 (require rackunit)
 (provide (all-defined-out))
 
-(define-syntax-rule (force-Consumed (p inp))
-  (let ([res (parse p (open-input-string inp))])
-    (if (Consumed? res)
-        (struct-copy Consumed res [reply (force (Consumed-reply res))])
-        res)))
+(define (force-Consumed res)
+  (if (Consumed? res)
+      (struct-copy Consumed res [reply (force (Consumed-reply res))])
+      res))
 (define-syntax (check-parsing stx) 
   (syntax-case stx ()
     [(_ (p input-str) parsed rst)
      #`(let ([in (open-input-string input-str)])
-         (match (parse p in)
-         [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos2 msg exp)))
+         (match (force-Consumed (parse p in))
+         [(Consumed (Ok consumed))
           (if (list? consumed) ; if not list, then it's a single char
               #,(syntax/loc #'parsed 
                   (check-equal? consumed (string->list parsed)
@@ -23,24 +22,34 @@
                      #,(syntax/loc #'parsed
                          (check-equal? consumed (car (string->list parsed))))))
           #,(syntax/loc #'rst (check-equal? (port->string in) rst
-                                            "remaining input does't not match expected"))]))]))
+                                            "remaining input does't not match expected"))]
+           [(Empty (Ok res))
+            (if (list? res) ; if not list, then it's a single char
+                #,(syntax/loc #'parsed 
+                    (check-equal? res (string->list parsed)
+                                  "parsing result does not match expected"))
+                (begin #,(syntax/loc #'parsed 
+                           (check-equal? (length (string->list parsed)) 1))
+                       #,(syntax/loc #'parsed
+                           (check-equal? res (car (string->list parsed))))))
+            #,(syntax/loc #'rst (check-equal? (port->string in) rst
+                                              "remaining input does't not match expected"))]))]))
 (define-syntax (check-parsings stx)
   (syntax-case stx ()
     [(_ (p input-str) parsed ... rst)
      #`(let ([in (open-input-string input-str)])
-         (match (parse p in) #;(force-Consumed e)
-         [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
-                   (let ([consumed (force consumed)])
+         (match (force-Consumed (parse p in))
+         [(Consumed (Ok consumed))
           #,(syntax/loc (car (syntax->list #'(parsed ...)))
-              (check-equal? consumed (list (string->list parsed) ...))))
+              (check-equal? consumed (list (string->list parsed) ...)))
           #,(syntax/loc #'rst (check-equal? (port->string in) rst
                                             "remaining input does't not match expected"))]))]))
 (define-syntax (check-line-parsings stx)
   (syntax-case stx ()
     [(_ (p input-str) (x ...) ... rst)
      #`(let ([in (open-input-string input-str)])
-         (match (parse p in) #;(force-Consumed e)
-         [consumed #;(Consumed (Ok consumed (State remaining pos _) (Msg pos msg exp)))
+         (match (force-Consumed (parse p in))
+         [(Consumed (Ok consumed))
           #,(syntax/loc (car (syntax->list (car (syntax->list #'((x ...) ...)))))
               (check-equal? consumed (list (list (string->list x) ...) ...)))
           #,(syntax/loc #'rst (check-equal? (port->string in) rst
@@ -68,12 +77,13 @@
        (check-exn exn:fail:parsack? 
          (thunk
           (with-handlers 
-            ([exn:fail:parsack? (λ (x) 
-                          #,(syntax/loc #'msg (check-equal? (exn-message x) msg
-                                                            "err msg doesn't match expected"))
-                          (raise x))])
-            (force (with-input-from-string input-str (curry parse p))) #;(force-Consumed e)))))]))
-(define-syntax (check-partial-parse-error stx)
+            ([exn:fail:parsack?
+              (λ (x) 
+                #,(syntax/loc #'msg (check-equal? (exn-message x) msg
+                                                  "err msg doesn't match expected"))
+                (raise x))])
+            (force-Consumed (with-input-from-string input-str (curry parse p))) #;(force-Consumed e)))))]))
+#;(define-syntax (check-partial-parse-error stx)
   (syntax-case stx ()
     [(_ e) (syntax/loc stx (check-partial-parse-error e ""))]
     [(_ e msg)
