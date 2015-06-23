@@ -14,26 +14,34 @@
 ;; Parsers use a $-prefixed name.
 ;; Parser combinators have camelCase names, with 1st char lowercase
 
+;; Two different factors may be used to combine parsers:
+;; - whether a parser consumed input, ie returns Consumed and not empty
+;; - whether a parser succeeds, ie returns an Ok and not an Error
+;; Some combinators use only one of the factors when determining how to combine
+;; parsers; others use both.
+
 ;; A [Result X] is one of:
 ;; - (Consumed [Reply X])
 ;; - (Empty [Reply X])
 ;; NOTE: Cannot use #f as parse result because some parsers want to produce #f, eg json
+(struct Consumed (reply))
+(struct Empty (reply))
 
 ;; A [Reply X] is one of:
 ;; - (Ok X)
-;; - ERROR
-
+;; - (Error)
 (struct Ok (parsed) #:transparent)
-(struct Error () #:transparent)
-(define ERROR (Error)) ; singleton
-(define (fail? x) (eq? x ERROR))
+(struct Error ())
 
-;; [Thunk String]
-;(define current-unexpected (make-parameter ""))
+;; global parameters ----------------------------------------------------------
+;; current-unexpected : [Thunk String]
+;; The current unexpected char.
 (define current-unexpected "")
 (define (reset!-unexpected) (set! current-unexpected ""))
 (define (get-unexpected) current-unexpected)
 (define (set!-unexpected str) (set! current-unexpected str))
+; current-expected : [List [Thunk String]]
+;; The current expected chars.
 (define current-expected null)
 (define (reset!-expected) (set! current-expected null))
 (define (get-expected) current-expected)
@@ -41,63 +49,20 @@
 (define (merge!-expected exps1 exps2) (set!-expected (append exps1 exps2)))
 (define (cons!-expected exp) (set!-expected (cons exp current-expected)))
 (define (append!-expected exps) (set!-expected (append exps current-expected)))
-;; [List [Thunk String]]
-;(define current-expected (make-parameter null))
-;; HashEq
-;; implement user-state with parameter
-;(define user-state (make-parameter (hasheq)))
-;(define (user-state-reset) (user-state (hasheq)))
-;(define (user-state-get key) (hash-ref (user-state) key #f))
-;(define (user-state-set! key val) (user-state (hash-set (user-state) key val)))
-;; non-parameter
+;; user-state [MutHashEq Sym => X]
+;; state customizable by the user
 (define user-state (make-hasheq))
 (define (user-state-reset!) (set! user-state (make-hasheq)))
 (define (user-state-get key) (hash-ref user-state key #f))
 (define (user-state-set! key val) (hash-set! user-state key val))
 
-;; OLD: -----------------------------------------------------------------------
-;; A [Parser X] is a function: State -> [Consumed X]
-;;   where X = the type of the parsed output
-
-;; A State is a (State String Pos UserState)
-;; - parsers consume a State
-(struct State (str pos user) #:transparent)
-;; where str = input
-;;       pos = Pos
-;;       user = UserState
-
-;; A Message is a (Msg Pos (-> String) [List (-> String)])
-(struct Msg (pos str strs) #:transparent)
-;; where pos = Pos
-;;       str = (thunk of) unexpected input
-;;       strs = (thunks of) possible expected inputs
-
-;; A [Consumed X] is one of:
-;; - (Consumed [Reply X])
-;; - (Empty [Reply X])
-(struct Consumed (reply) #:transparent) ;; should be lazy? (see >>= def)
-(struct Empty (reply) #:transparent)
-
-(define-match-expander Consumed! (syntax-rules () [(_ e) (Consumed e #;(app force e))]))
-
-;; A [Reply X] is one of:
-;; - (Ok X State Message)
-;; - (Error Message)
-;(struct Ok (parsed rest msg) #:transparent)
-;(struct Error (msg) #:transparent)
-
+;; errors ---------------------------------------------------------------------
 (define (err expected)
   (λ (in)
     (set!-unexpected (thunk (port->string in)))
     (set!-expected (list expected))
-    (Empty ERROR)))
-(define $err
-  (err "")
-  #;(λ (in)
-    ;(current-unexpected (thunk (port->string in)))
-    ;(current-expected null)
-    #f)
-  #;(match-lambda [(State inp pos _) (Empty (Error (Msg pos inp null)))]))
+    (Empty (Error))))
+(define $err (err ""))
 
 (struct exn:fail:parsack exn:fail ())
 
@@ -105,16 +70,9 @@
   (raise (exn:fail:parsack (string-append "parse ERROR: " msg)
                            (current-continuation-marks))))
 
-;; A Pos is a (Pos line col ofs)
-;; - numbers are 1-based
+;; A Pos is a (Pos line col ofs), numbers are 1-based
 (struct Pos (line col ofs) #:transparent)
 (define parse-source (make-parameter #f)) ;; not in Pos for efficiency
-(define (start-pos)
-  (Pos 1 1 1))
-(define (incr-pos p c)
-  (match* (p c)
-    [((Pos line col ofs) #\newline) (Pos (add1 line) 1 (add1 ofs) )]
-    [((Pos line col ofs) _        ) (Pos line (add1 col) (add1 ofs) )]))
 (define (format-pos p)
   (match* (p (parse-source))
     [((Pos line col ofs) (? path-string? src))
@@ -127,10 +85,7 @@
   (λ (in)
     (reset!-unexpected)
     (reset!-expected)
-    (Empty (Ok x)))
-  #;(match-lambda 
-    [(and state (State _ pos _))
-     (Empty (Ok x state (Msg pos "" null)))]))
+    (Empty (Ok x))))
 
 ;; creates a parser that consumes 1 char if it satisfies predicate p?
 (define (satisfy p?)
@@ -140,7 +95,7 @@
       [(eof-object? c)
        (set!-unexpected "end of input")
        (reset!-expected)
-       (Empty ERROR)]
+       (Empty (Error))]
       [(p? c)
        (reset!-unexpected)
        (reset!-expected)
@@ -148,27 +103,14 @@
       [else
        (set!-unexpected (mk-string c))
        (reset!-expected)
-       (Empty ERROR)]))
-  #;(match-lambda 
-   [(State input pos user)
-    (if (str-empty? input)
-        (Empty (Error (Msg pos "end of input" null)))
-        (let ([c (str-fst input)])
-          (if (p? c)
-              (let* ([new-pos (incr-pos pos c)]
-                     [new-state (State (str-rst input) new-pos user)])
-                (Consumed (Ok c new-state (Msg new-pos "" null))))
-              (Empty (Error (Msg pos (mk-string c) null))))))]))
+       (Empty (Error))])))
 
 (define (ofString ? exps)
   (λ (in)
     (match ((satisfy ?) in)
-      [(Consumed! (Error))
+      [(and result (or (Consumed (Error)) (Empty (Error)))) ; error
        (cons!-expected exps)
-       (Consumed (Error))]
-      [(Empty (Error))
-       (cons!-expected exps)
-       (Empty (Error))]
+       result]
       [ok ok])))
 
 (define (oneOf str)
@@ -202,87 +144,36 @@
                       (string-join (map ~s ss) ", ")
                       " (case insensitive)")))
 
-;; >= : [Parser X] (X -> [Parser Y]) -> [Parser Y]
+;; >= : [Parser X] ([Result X] -> [Parser Y]) -> [Result Y]
 ;; Creates a Parser from a Parser p and a continuation f for p's result.
 ;; - if p succeeds but does not consume input, then f determines result
-;; - if p succeeds and consumes input, return Consumed with thunk that delays
-;;   parsing from f
-;; - if p returns #f, do not continue with f
+;; - if p succeeds and consumes input, return Consumed with reply from f
+;; - if p fails, do not continue with f
 (define (>>= p f)
   (λ (in)
     (match (p in)
-      [(Empty reply)
-       (match reply
-         [(Ok x)
-          (define saved-expected (get-expected))
-          (match ((f x) in)
-            [(Empty (Error))
-             (append!-expected saved-expected)
-             (Empty (Error))]
-            [(Empty (Ok x))
-             (append!-expected saved-expected)
-             (Empty (Ok x))]
-            [consumed consumed])]
-         [_ (Empty ERROR)])]
-      [(Consumed reply1)
-       (Consumed ; arg to Consumed constructor should be delayed
-        ;(lazy
-         (match reply1 #;(force reply1)
-           [(Ok x)
-            (define saved-expected (get-expected))
-            (match ((f x) in)
-              [(Consumed reply2) reply2]
-              [(Empty (Error))
-               (append!-expected saved-expected)
-               (Error)]
-              [(Empty reply2) reply2])]
-           [error error]))]))
-  #;(λ (in)
-    (define res (p in))
-    (if res ((f res) in) #f))
-  #;(λ (in)
-    (define pos (file-position in))
-    (define p-result/#f (p in))
-    (if (= pos (file-position in))
-        (if p-result/#f
-            (let (#;[saved-expected (current-expected)])
-              (let ([f-result/#f ((f p-result/#f) in)])
-                #;(when (= pos (file-position in)) ; f consumed no input
-                    (current-expected (append saved-expected (current-expected))))
-                f-result/#f))
-              #f)
-        (lazy
-         (let ([p-result/#f p-result/#f])
-           (if p-result/#f
-               (let ([f-result/#f ((f p-result/#f) in)])
-                 #;(when (and (= pos (file-position in)) (not f-result/#f))
-                     (current-expected (append saved-expected (current-expected))))
-                 f-result/#f)
-               #f)))))
-  #;(λ (input)
-    (match (p input)
-      [(Empty reply)
-       (match reply
-         [(Ok x rest msg1)
-          (match ((f x) rest)
-            [(Empty (Error msg2)) (mergeError msg1 msg2)]
-            [(Empty (Ok x inp msg2)) (mergeOk x inp msg1 msg2)]
-            [consumed consumed])]
-         [err (Empty err)])]
-      [(Consumed reply1)
-       (Consumed ; arg to Consumed constructor should be delayed
-        (lazy
-         (match (force reply1)
-           [(Ok x rest msg1)
-            (match ((f x) rest)
-              [(Consumed reply2) reply2]
-              [(Empty (Error msg2)) (Error (merge msg1 msg2))]
-              [(Empty ok) ok])]
-           [error error])))])))
+      [(Empty (Ok x))
+       (define saved-expected (get-expected))
+       (match ((f x) in)
+         [(Empty y)
+          (append!-expected saved-expected)
+          (Empty y)]
+         [consumed consumed])]
+      [(Consumed (Ok x))
+       (define saved-expected (get-expected))
+       (Consumed
+        (match ((f x) in)
+          [(Empty (Error))
+          (append!-expected saved-expected)
+          (Error)]
+         [(or (Consumed reply) (Empty reply)) reply]))]
+      [err err])))
 (define (>> p q) (>>= p (λ _ q)))
 
 ;; <|> choice combinator
 ;; first tries to parse with p, only tries q if p does not consume input
+;; - if p does not consume input and errors, return result of q
+;; - if p does not consume input but returns result, then use that result unless q consumes
 ;; thus, <or> implements "longest match"
 (define (<or>2 p q)
   (λ (in)
@@ -301,39 +192,8 @@
           (append!-expected saved-expected)
           (Empty (Ok x))]
          [consumed consumed])]
-      [consumed consumed]))
-  #;(λ (in)
-    (define pos (file-position in))
-    (define p-result/#f (p in))
-    (if (= (file-position in) pos)
-        (let (#;[saved-expected (current-expected)]
-              [q-result/#f (q in)])
-          (if (= (file-position in) pos)
-              (begin
-                ;(current-expected (append saved-expected (current-expected)))
-                (if p-result/#f p-result/#f q-result/#f))
-              q-result/#f))
-        p-result/#f))
-  #;(λ (state)
-    (match (p state)
-      [(Empty (Error msg1))
-       (match (q state)
-         [(Empty (Error msg2)) (mergeError msg1 msg2)]
-         [(Empty (Ok x inp msg2)) (mergeOk x inp msg1 msg2)]
-         [consumed consumed])]
-      [(Empty (Ok x inp msg1))
-       (match (q state)
-         [(Empty (Error msg2)) (mergeOk x inp msg1 msg2)]
-         [(Empty (Ok _ _ msg2)) (mergeOk x inp msg1 msg2)]
-         [consumed consumed])]
       [consumed consumed])))
-(define (mergeConsumed x inp msg1 msg2) (Consumed (Ok x inp (merge msg1 msg2))))
-(define (mergeOk x inp msg1 msg2) (Empty (Ok x inp (merge msg1 msg2))))
-(define (mergeError msg1 msg2) (Empty (Error (merge msg1 msg2))))
-(define/match (merge msg1 msg2)
-  [((Msg _ _ exp1) (Msg pos inp exp2))
-   (Msg pos inp (append exp1 exp2))])
-                      
+
 ;; assumes (length args) >= 1
 (define (<or> . args)
   (foldl (λ (p acc) (<or>2 acc p)) (car args) (cdr args)))
@@ -353,31 +213,11 @@
           (append!-expected saved-expected)
           (Empty x)]
          [consumed consumed])]
-      [result result]))
-  #;(λ (in)
-    (define pos (file-position in))
-    (define result/#f (p in))
-    (if (and (not result/#f) (= pos (file-position in)))
-        (let ([pos (file-position in)]
-              ;[saved-expected (current-expected)]
-              [q-result/#f (q in)])
-          #;(when (= pos (file-position in))
-            (current-expected (append saved-expected (current-expected))))
-          q-result/#f)
-        result/#f))
-  #;(λ (state)
-    (match (p state)
-      [(Empty (Error msg1))
-       (match (q state)
-         [(Empty (Error msg2)) (mergeError msg1 msg2)]
-         [(Empty (Ok x inp msg2)) (mergeOk x inp msg1 msg2)]
-         [consumed consumed])]
-      [result result])))
+      [res res])))
                       
 ;; assumes (length args) >= 2
 (define (<any> . args)
   (foldl (λ (p acc) (<any>2 acc p)) (car args) (cdr args)))
-
 
 (define (option x p) (<or> p (return x)))
 (define (optionMaybe p) (option #f p))
@@ -391,57 +231,34 @@
     (define-values (r c pos) (port-next-location in))
     (define byte-pos (file-position in))
     (match (p in)
-      [(Consumed! (Error))
+      [(Consumed (Error)) ; dont need to back track if Empty-Error
        (file-position in byte-pos) ; backtrack
        (set-port-next-location! in r c pos)
-       (Empty ERROR)] 
-      [(Consumed ok)
-       ;(file-position in (+ pos (file-position in/peek)))
-       ;(read-bytes (file-position in/peek) in) ; commit peek
-       (Consumed ok)]
-      [other other])) ; no consumed input
-  #;(λ (in)
-    (define in/peek (peeking-input-port in))
-    (define result/#f (p in/peek))
-    (cond
-      [result/#f
-       (read-bytes (file-position in/peek) in)
-       result/#f]
-      [else #f]))
-  #;(λ (state)
-    (match (p state)
-      [(Consumed! (Error msg)) (Empty (Error msg))]
+       (Empty (Error))] 
       [other other])))
 
 ;; Parse p and return the result, but don't consume input.
 (define (lookAhead p)
   (λ (in)
-    (define-values (r c pos) (port-next-location in))
+    (define-values (r c pos) (port-next-location in)) ; save current loc
     (define byte-pos (file-position in))
-    ;(match (p (peeking-input-port in))
     (match (p in)
-      [(Consumed! (Ok result))
+      [(Consumed (Ok result))
        (file-position in byte-pos) ; backtrack
        (set-port-next-location! in r c pos)
        (set!-unexpected (thunk (port->string in)))
        (Empty (Ok result))]
-      [emp emp]))
-  #;(λ (in)
-    (p (peeking-input-port in)))
-  #;(match-lambda
-    [(and input (State inp pos _))
-     (match (p input)
-       [(Consumed! (Ok result _ (Msg _ str strs)))
-        (Empty (Ok result input (Msg pos inp strs)))]
-       [emp emp])]))
+      [res res])))
 
-;; converts intermediate parse result to string -- for err purposes
+;; converts intermediate parse result to string -- for error purposes
 ;; Note: Efficiency of this matters, do dont call until throwing the exception
 (define (result->str res)
   (cond [(char? res) (mk-string res)]
         [(and (list? res) (andmap char? res)) (list->string res)]
         [else res]))
 
+;; fails (and does not consume input) if p succeeds and consumed input,
+;; otherwise parse with q
 (define (<!> p [q $anyChar])
   (λ (in)
     (define-values (r c pos) (port-next-location in)) ; saved location
@@ -450,29 +267,14 @@
     (file-position in byte-pos) ; always backtrack
     (set-port-next-location! in r c pos)
     (match res
-      [(Consumed! (Ok res))
+      [(Consumed (Ok res))
        (set!-unexpected (thunk (result->str res)))
        (set!-expected (list (thunk (format "not: ~a" (result->str res)))))
-       (Empty ERROR)]
-      [_ (q in)]))
-  #;(λ (in)
-    (define in/peek (peeking-input-port in))
-    (define result/#f (p in/peek))
-    (cond
-      [(and result/#f (not (zero? (file-position in/peek))))
-       ;(current-unexpected (λ () (result->str result/#f)))
-       ;(current-expected `(,(λ () (format "not: ~a" (result->str result/#f)))))
-       #f]
-      [else (q in)]))
-  #;(match-lambda 
-    [(and state (State inp pos _))
-     (match (p state)
-       [(Consumed! (Ok res _ _))
-        (Empty (Error (Msg pos (thunk (result->str res)) 
-                           (list (thunk (format "not: ~a" (result->str res)))))))]
-       [_ (q state)])]))
+       (Empty (Error))]
+      [_ (q in)])))
 
 ;; succeeds when p fails; does not consume input
+;; differs from <!> in that there is no second parser to try
 (define (notFollowedBy p)
   (λ (in)
     (define-values (r c pos) (port-next-location in)) ; saved locaition
@@ -481,32 +283,13 @@
     (file-position in byte-pos) ; always backtrack; never consume
     (set-port-next-location! in r c pos)
     (match res
-      [(Consumed! (Ok res))
+      [(Consumed (Ok res))
        (set!-unexpected (thunk (result->str res)))
        (set!-expected (list (thunk (format "not: ~a" (result->str res)))))
-       (Empty ERROR)]
-      [_
-       (reset!-unexpected)
-       (reset!-expected)
-       (Empty (Ok null))]))
-  #;(λ (in)
-    (define result/#f (p (peeking-input-port in)))
-    (cond
-      [result/#f
-       ;(current-unexpected (thunk (result->str result/#f)))
-       ;(current-expected (list (thunk (format "not: ~a" (result->str result/#f)))))
-       #f]
-      [else
-       ;(current-unexpected "")
-       ;(current-expected null)
-       null]))
-  #;(match-lambda
-    [(and state (State inp pos _))
-     (match (p state)
-       [(Consumed! (Ok res _ _))
-        (Empty (Error (Msg pos (thunk (result->str res)) 
-                           (list (thunk (format "not: ~a" (result->str res)))))))]
-       [_ (Empty (Ok null state (Msg pos null null)))])]))
+       (Empty (Error))]
+      [_ (reset!-unexpected)
+         (reset!-expected)
+         (Empty (Ok null))])))
 
 ;; parse with p 0 or more times
 ;; some notes:
@@ -556,15 +339,7 @@
       [(Empty x)
        (set!-expected (list exp))
        (Empty x)]
-      [other other]))
-  #;(λ (state)
-    (match (p state)
-      [(Empty (Error msg)) (Empty (Error (expect msg exp)))]
-      [(Empty (Ok x st msg)) (Empty (Ok x st (expect msg exp)))]
       [other other])))
-(define (expect msg exp)
-  (match msg
-    [(Msg pos inp _) (Msg pos inp (list exp))]))
 
 ;; creates a parser that parses char c
 (define (char c)
@@ -596,12 +371,9 @@
 ;; Consume and return a string for which the parser succeeds on each
 ;; character.
 (define (string* str p)
-  (chars (string->list str) p)      
-    #;(if (str-empty? str)
-        (return null)
-        (parser-cons (p (str-fst str))
-                     (string* (str-rst str) p))))
-;; Parser P must parse successfully with each c
+  (chars (string->list str) p))
+
+;; Parser p must parse successfully with each c in cs
 (define (chars cs p)
   (if (null? cs)
       (return null)
@@ -624,23 +396,7 @@
        [else
         (set!-unexpected "non-empty input")
         (reset!-expected)
-        (Empty ERROR)]))
-   #;(λ (in)
-     (define c (peek-char in))
-     (cond
-       [(eof-object? c)
-         ;(current-unexpected "")
-         ;(current-expected null)
-         null]
-       [else ;(current-unexpected "non-empty input")
-             ;(current-expected null)
-             #f]))
-   #;(λ (state)
-     (match state
-       [(State inp pos _)
-        (if (str-empty? inp) 
-            (Empty (Ok null state (Msg pos "" null)))
-            (Empty (Error (Msg pos "non-empty input" null))))]))
+        (Empty (Error))]))
    "end-of-file"))
 (define $eol (<?> (<or> (try (string "\n\r"))
                         (try (string "\r\n"))
@@ -656,11 +412,12 @@
   (string-join (map frc exp) ", " #:before-last " or "))
 
 ;; An Input is one of:
-;; - String, representing a filename
+;; - String,
 ;; - Path p, where (path? p) = #t
 ;; - InputPort in, where (input-port? in) = #t
 
-;; parse : Parser Input -> Output
+;; parse : [Parser X] Input -> [Reply X] or exception
+;; Raises exception if p does not succeed, ie returns Ok
 ;; errors have to be printed ~s, otherwise newlines get messed up
 (define (parse p [inp (current-input-port)])
   (define res
@@ -676,55 +433,19 @@
            (with-input-from-string inp (curry parse p))]
           [else (raise-user-error 'parse
                  "input not input port, file path, or string file name")]))
-;  (displayln res)
   (match res
-    [(Empty (Error))
+    [(or (Empty (Error)) (Consumed (Error)))
      (define-values (r c pos) (port-next-location inp))
      (parsack-error 
       (format "at ~a\nunexpected: ~s\n  expected: ~s"
               (format-pos (Pos r (add1 c) pos))
               (frc (get-unexpected))
               (format-exp (get-expected))))]
-    [(Consumed! (Error))
-     (define-values (r c pos) (port-next-location inp))
-     (parsack-error 
-      (format "at ~a\nunexpected: ~s\n  expected: ~s"
-              (format-pos (Pos r (add1 c) pos))
-              (frc (get-unexpected))
-              (format-exp (get-expected))))]
-    [x x])
-  #;(define result/#f
-    (cond [(input-port? inp)
-           (port-count-lines! inp)
-           ;(current-unexpected "")
-           ;(current-expected null)
-           (user-state-reset)
-           (p inp)]
-          [(path? inp) (with-input-from-file inp (curry parse p))]
-          [(string? inp) (with-input-from-string inp (curry parse p))]
-          [else (raise-user-error 'parse
-                 "input not input port, file path, or string file name")]))
-    #;(or result/#f
-        (let-values ([(r c pos) (port-next-location inp)])
-          (parsack-error 
-           (format "at ~a\nunexpected: ~s\n  expected: ~s"
-                   (format-pos (Pos r (add1 c) pos)) ; 1-based col num
-                   "" #;(frc (current-unexpected))
-                   (format-exp null #;(current-expected))))))
-  #;(match (p (State inp (start-pos) (hasheq)))
-    [(Empty (Error (Msg pos msg exp)))
-     (parsack-error 
-      (format "at ~a\nunexpected: ~s\n  expected: ~s"
-              (format-pos pos) (frc msg) (format-exp exp)))]
-    [(Consumed! (Error (Msg pos msg exp)))
-     (parsack-error 
-      (format "at ~a\nunexpected: ~s\n  expected: ~s"
-              (format-pos pos) (frc msg) (format-exp exp)))]
-    [x x]))
+    [ok ok]))
 
 (define (parse-result p s)
   (match (parse p s)
-    [(Consumed! (Ok parsed)) parsed]
+    [(Consumed (Ok parsed)) parsed]
     [(Empty     (Ok parsed)) parsed]
     [x (parsack-error (~v x))]))
 
@@ -736,10 +457,6 @@
      #'(>>= p (λ (x) (parser-compose e ...)))]
     [(_ q e ...) #'(>>= q (λ (x) (parser-compose e ...)))]))
 
-;(define-for-syntax (add-bind stx)
-;  (syntax-parse stx #:datum-literals (~)
-;    [(~ p) #'p]
-;    [q #`(#,(generate-temporary) <- q)]))
 (define-syntax (parser-seq stx)
   (define (add-bind stx)
     (syntax-parse stx #:datum-literals (~)
@@ -754,11 +471,9 @@
                 (q ...))
           ;(printf "~a\n" (syntax->datum #'(q2 ...))) ; uncomment for debugging
           #'(parser-compose q ... (return (combine x ...)))]))]))
-;;(parse (parser-seq $letter $digit) "a1")
-;;(parse (parser-seq $letter $digit #:combine-with list) "a1")
 
 (define-syntax-rule (parser-cons x y) (parser-seq x y #:combine-with cons))
-;(define-syntax-rule (parser-one x ...) (parser-seq x ... #:combine-with (λ (y) y)))
+
 (define-syntax (parser-one stx)
   (define (add-bind stx)
     (syntax-parse stx #:datum-literals (~>)
@@ -778,15 +493,9 @@
 
 (define (getState key)
   (λ (in)
-    (define val (user-state-get key))
     (reset!-expected)
     (reset!-unexpected)
-    (Empty (Ok val)))
-  #;(match-lambda
-   [(and state (State _ pos user))
-    (Empty (Ok (hash-ref user key #f)
-               state
-               (Msg pos "" null)))]))
+    (Empty (Ok (user-state-get key)))))
 
 (define (setState key val)
   (λ (in)
@@ -794,12 +503,7 @@
     (reset!-expected)
     (reset!-unexpected)
     (user-state-set! key val)
-    (Empty (Ok current-val)))
-  #;(match-lambda
-   [(and state (State inp pos user))
-    (Empty (Ok (hash-ref user key #f) ;; "return" original value
-               (State inp pos (hash-set user key val))
-               (Msg pos "" null)))]))
+    (Empty (Ok current-val))))
 
 ;; Roughly like `parameterize`, but for user state
 (define-syntax (withState stx)

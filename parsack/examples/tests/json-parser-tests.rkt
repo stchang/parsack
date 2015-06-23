@@ -8,7 +8,7 @@
   (syntax-case stx ()
     [(_ p n)
      #`(match p
-         [(Consumed! (Ok consumed))
+         [(Consumed (Ok consumed))
           #,(syntax/loc #'n (check-equal? consumed n))])]))
 
 (check-parse (parse $p_number "-3.14") -3.14)

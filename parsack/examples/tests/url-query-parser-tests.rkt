@@ -9,7 +9,7 @@
   (syntax-parse stx
   [(_ p (~seq x y) ...)
    #`(match p
-       [(Consumed! (Ok consumed))
+       [(Consumed (Ok consumed))
         #,(syntax/loc stx 
             (check-equal? consumed 
                           (list (cons (string->list x) (string->list y)) ...)))])]))
