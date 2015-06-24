@@ -1,15 +1,19 @@
 #lang racket/base
 
 (require parsack
-         parsack/examples/json-parser)
+         parsack/examples/json-parser
+         racket/runtime-path)
+
+(define-runtime-path json-file "json.json")
+
 (displayln "parsack json parser:")
 (for ([i 3]) (collect-garbage))
-(time (void (with-input-from-file "json.json" (λ () (parse $p_text)))))
+(time (void (with-input-from-file json-file (λ () (parse $p_text)))))
 
 (require json)
 (displayln "Racket read-json:")
 (for ([i 3]) (collect-garbage))
-(time (void (with-input-from-file "json.json" read-json)))
+(time (void (with-input-from-file json-file read-json)))
 
 ;; 2015-06-24, with parsack 0.4 (ports)
 ; output, i7-2700k, 16gb

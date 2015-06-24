@@ -320,9 +320,9 @@ A CSV string is a series of lines.
 @defproc[(satisfy [p? (-> any/c boolean?)]) parser?]{
   Creates a parser that consumes and returns one character if it satisfies predicate @racket[p?].}
 @defproc[(char [c char?]) parser?]{
-  Creates a parser that parses char @racket[c], case-sensitive.}
+  Creates a parser that parses and returns char @racket[c], case-sensitive.}
 @defproc[(charAnyCase [c char?]) parser?]{
-  Creates a parser that parses char @racket[c], case-insensitive.}
+  Creates a parser that parses and returns char @racket[c], case-insensitive.}
 @defproc[(noneOf [str string?]) parser?]{
   Creates a parser that consumes and returns one character if the character does not appear in @racket[str].}
 @defproc[(oneOf [str string?]) parser?]{
@@ -332,7 +332,7 @@ A CSV string is a series of lines.
 @defproc[(oneOfStringsAnyCase [str string?] ...) parser?]{
   Creates a parser that consumes and returns any of the @racket[str]s, case-insensitive. Note that the parse result is @racket[(listof char?)] not @racket[string?].}
 @defproc[(string [str string?]) parser?]{
-  Creates a parser that parses but does not return @racket[str].}
+  Creates a parser that parses and returns @racket[str] as a list of chars.}
 
 @section{Constant parsers}
 This library uses the $ prefix for identifiers that represent parsers (as opposed to combinators).
@@ -380,7 +380,14 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 
 @defproc[(err [expected string?]) parser?]{ 
   Like @racket[$err] but allows custom expected msg.}
-          
+
+@section{Bytestring parsing}
+
+@defproc[(byte [b byte?]) parser?]{
+  Creates a parser that parses and returns byte @racket[b].}
+@defproc[(bytestring [bstr bytes?]) parser?]{
+  Creates a parser that parses and returns @racket[bstr] as a list of bytes.}
+
 @;; ---------------------------------------------------------------------------
 @section[#:tag "parse-structs"]{Parse Result Structs}
 

@@ -20,6 +20,7 @@
          sepBy sepBy1 endBy between
          <?>
          char charAnyCase $anyChar $letter $digit $alphaNum $hexDigit $identifier
+         byte bytestring
          $space $spaces $newline $tab
          string stringAnyCase
          $eof $eol
@@ -118,10 +119,11 @@
     (reset!-expected)
     (Empty (Ok x))))
 
-;; creates a parser that consumes 1 char if it satisfies predicate p?
-(define (satisfy p?)
+;; creates a parser that consumes 1 char or byte (ie one unit of input)
+;; if it satisfies predicate p?
+(define (satisfy p? #:read [read-one read-char] #:peek [peek-one peek-char])
   (λ (in)
-    (define c (peek-char in))
+    (define c (peek-one in))
     (cond
       [(eof-object? c)
        (set!-unexpected "end of input")
@@ -130,9 +132,11 @@
       [(p? c)
        (reset!-unexpected)
        (reset!-expected)
-       (Consumed (Ok (read-char in)))] ; commit peeked
+       (Consumed (Ok (read-one in)))] ; commit peeked
       [else
-       (set!-unexpected (mk-string c))
+       (set!-unexpected (thunk (cond [(char? c) (mk-string c)]
+                                     [(byte? c) (byte->str c)]
+                                     [else (~v c)])))
        (reset!-expected)
        (Empty (Error))])))
 
@@ -377,6 +381,10 @@
 (define (char c)
   (<?> (satisfy (curry char=? c))
        (mk-string c)))
+(define (byte->str b) (bytes->string/utf-8 (bytes b)))
+(define (byte b)
+  (<?> (satisfy (curry = b) #:read read-byte #:peek peek-byte)
+       (byte->str b)))
 (define (charAnyCase c)
   (<?> (satisfy (curry char-ci=? c))
        (~a (char-upcase c) " or " (char-downcase c))))
@@ -414,6 +422,8 @@
   (string* str char))
 (define (stringAnyCase str) ;case insensitive
   (string* str charAnyCase))
+(define (bytestring bstr)
+  (chars (bytes->list bstr) byte))
 
 ;; parser that only succeeds on empty input
 (define $eof
