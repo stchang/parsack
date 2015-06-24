@@ -50,8 +50,8 @@
 ;; - (Consumed [Reply X])
 ;; - (Empty [Reply X])
 ;; NOTE: Cannot use #f as parse result because some parsers want to produce #f, eg json
-(struct Consumed (reply))
-(struct Empty (reply))
+(struct Consumed (reply) #:transparent)
+(struct Empty (reply) #:transparent)
 
 ;; A [Reply X] is one of:
 ;; - (Ok X)

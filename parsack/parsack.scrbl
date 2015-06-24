@@ -1,5 +1,6 @@
 #lang scribble/manual
 @(require scribble/eval
+          scribble/base
           (for-label parsack
                      racket/contract/base
                      (rename-in racket/base [string mk-string])))
@@ -15,13 +16,57 @@
 
 Parsec implementation in Racket. See @cite["parsec"].
 
+
+@section{Parsers}
+
+A @deftech{parser} is a function that consumes an @racket[input-port?] and returns
+a parse result. A parse result is most commonly a @racket[char?] or a list of
+chars, but is ultimately determined by each specific parser.
+
+Two factors are considered when combining parsers:
+@itemlist[
+ @item{whether a parser consumes input, i.e., whether data was read from the input port,}
+ @item{or whether a parser succeeds or fails.}]
+These two factors are not mutually exclusive and some combinators only use one
+of the factors while others use both to determine the parse result.
+
+Specifically, @racket[Consumed] and @racket[Empty] struct results indicate
+input-consumption and no-input-consumption, respectively, while the
+@racket[Ok] and @racket[Error] structs indicate success and failure,
+respectively.
+See @secref{parse-structs} for more details about information contained in the
+parse result. In general, users should use combinators below to compose
+parsers and parse results, rather than directly handle the structs.
+
 @;; ---------------------------------------------------------------------------
 @section{Basic parsing functions}
 
-@defproc[(parse [p parser?] [input string?]) (or/c Consumed? Empty?)]{
-  Parses input string @racket[input] with parser @racket[p] and returns a complete @racket[Consumed] or @racket[Empty] struct describing the parse result, remaining input, and any error messages. 
+@defproc[(parse-result [p parser?] [input (or/c string? path? input-port?)])
+         any/c]{
+  Parses input @racket[input] with parser @racket[p] and returns the parse
+  result.
+
+ The input can be either a string, a filepath, or an input port. A string or
+ path input is converted to an input port before parsing begins.
+
+ Raises the @racket[exn:fail:parsack] exception on parser failure.
+ 
+@examples[#:eval the-eval
+  (parse-result $letter "abc")
+  (parse-result $letter "123")
+  (parse-result (many $letter) "abc123")
+  (parse-result (many $letter) "123")
+  ]}
+
+@defproc[(parse [p parser?] [input (or/c string? path? input-port?)])
+         (or/c Consumed? Empty?)]{
+  Parses input @racket[input] with parser @racket[p] and returns a
+ @racket[Consumed] or @racket[Empty] struct that contains the result.
+
+ The input can be either a string, a filepath, or an input port. A string or
+ path input is converted to an input port before parsing begins.
                       
-  See @secref{parse-structs} for details about information contained in the parse result. However, in general, users should use combinators below to compose parsers and parse results, rather than directly handle the @racket[Consumed] or @racket[Empty] structs.
+ Raises the @racket[exn:fail:parsack] exception on parser failure.
   
 @examples[#:eval the-eval
   (parse $letter "abc")
@@ -30,25 +75,22 @@ Parsec implementation in Racket. See @cite["parsec"].
   (parse (many $letter) "123")
   ]}
 
-@defproc[(parse-result [p parser?] [input string?]) any/c]{
-  Parses input string @racket[input] with parser @racket[p] and returns only the the parse result.
-@examples[#:eval the-eval
-  (parse-result $letter "abc")
-  (parse-result $letter "123")
-  (parse-result (many $letter) "abc123")
-  (parse-result (many $letter) "123")
-  ]}
-
 @;; ---------------------------------------------------------------------------
 @section{Basic parsing forms}
 
 @defproc[(return [x any/c]) parser?]{
-  Creates a parser that consumes no input and returns @racket[x].
+  Creates a parser that consumes no input and always succeeds, returning @racket[x].
   @examples[#:eval the-eval
     (parse (return "b") "a")]}
 
 @defproc[(>>= [p parser?] [f (-> any/c parser?)]) parser?]{
-  Monadic bind operator for parsers. Creates a parser that first parses with @racket[p], passes the result to @racket[f], then parses with the result of applying @racket[f]. If @racket[p] succeeds and consumes input, the application of @racket[f] is delayed. This avoids space leaks (see @cite["parsec"]).
+  Monadic bind operator for parsers. Creates a parser that first parses with @racket[p].
+
+ If @racket[p] fails, the error result is returned.
+
+ Otherwise, the parse result is passed to @racket[f], and continues parsing with
+ the parser created from applying @racket[f].
+ 
   @examples[#:eval the-eval
     (parse-result 
      (>>= (char #\() 
@@ -61,7 +103,11 @@ Parsec implementation in Racket. See @cite["parsec"].
      "(a)")]}
 
 @defproc[(>> [p parser?] [q parser?]) parser?]{
-  Creates a parser that first parses with @racket[p], ignores the result, then parses with @racket[q]. If @racket[p] consumes input, then parsing with @racket[q] is delayed. Equivalent to @racket[(>>= p (λ (x) q))] where @racket[x] is not in @racket[q].
+  Equivalent to @racket[(>>= p (λ (x) q))] where @racket[x] is not in @racket[q].
+
+ Creates a parser that first parses with @racket[p], and if successful,
+ ignores the result, then parses with @racket[q].
+  
   @examples[#:eval the-eval
     (parse-result 
      (>> (char #\() 
@@ -320,37 +366,36 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @section{Error handling combinators}
 
 @defproc[(try [p parser?]) parser?]{
-  Lookahead function. Creates a parser that tries to parse with @racket[p] but does not consume input if @racket[p] fails.}
+  Lookahead function. Creates a parser that tries to parse with @racket[p]
+ but does not consume input if @racket[p] fails.
+  @examples[#:eval the-eval
+  ((string "ab") (open-input-string "ac"))
+  ((try (string "ab")) (open-input-string "ac"))
+  ]}
 
 @defproc[(<?> [p parser?] [expected string?]) parser?]{
   Creates a parser that tries to parser with @racket[p] and returns error msg @racket[expected] if it fails.}
 
 @defthing[$err parser?]{Parser that always returns error.}
 
-@defproc[(unexpected [expected any/c]) parser?]{ 
+@defproc[(err [expected string?]) parser?]{ 
   Like @racket[$err] but allows custom expected msg.}
           
 @;; ---------------------------------------------------------------------------
 @section[#:tag "parse-structs"]{Parse Result Structs}
 
-A @deftech{parser} is a function that consumes a @racket[State] and returns either an error, or a @racket[Consumed], or an @racket[Empty].
+A @deftech{parser} is a function that consumes an @racket[input-port?] and
+returns either a @racket[Consumed], or an @racket[Empty] struct.
 
 In general, users should use the above combinators to connect parsers and parse results, rather than manipulate these structs directly.
 
-@defstruct*[State ([str string?] [pos Pos?] [user (hash/c symbol? any/c)])]{
-  Input to a parser. Consists of an input string, a position, and arbitrary user state. See @secref{userstate} for more information about the user state.
-  
-  The @racket[parse] function turns its input string into a @racket[State] before applying the given parser.}
-
-@defstruct*[Consumed ([reply (or/c Ok? Error? (promise/c Ok?) (promise/c Error?))])]{
+@defstruct*[Consumed ([reply (or/c Ok? Error?)])]{
   This is the result of parsing if some input is consumed. 
-  
-  The parse result may be a delayed computation.
   
   @examples[#:eval the-eval
   (parse $letter "abc")
   (parse (many $letter) "abc123")
-  ((string "ab") (State "ac" (Pos 1 1 1) (hash)))
+  ((string "ab") (open-input-string "ac"))
   ]}
 
 @defstruct*[Empty ([reply (or/c Ok? Error?)])]{
@@ -359,8 +404,8 @@ In general, users should use the above combinators to connect parsers and parse 
   (parse (many $letter) "123")
   ]}
 
-@defstruct*[Ok ([parsed any/c][rest State?][msg Msg?])]{
-  Contains the result of parsing, remaining input, and any error messages. 
+@defstruct*[Ok ([parsed any/c])]{
+  Contains the result of parsing @racket[parser].
   
   The parse result can be any value and depends on the specific parser that produces the this struct.
   
@@ -369,23 +414,14 @@ In general, users should use the above combinators to connect parsers and parse 
   (parse (many $letter) "123")
   ]}
 
-@defstruct*[Error ([msg Msg?])]{
+@defstruct*[Error ()]{
   Indicates parse error.
  
   @examples[#:eval the-eval
-  ($letter (State "123" (Pos 1 1 1) (hash)))
+  ($letter (open-input-string "123"))
   ]}
 
                                 
-@defstruct*[Msg ([pos Pos?][unexpected (-> string?)][expected (listof (-> string?))])]{
-  Indicates parse error. Error message generation is delayed until an exception is thrown.}
-
-@defstruct*[Pos ([line exact-nonnegative-integer?]
-                 [col exact-nonnegative-integer?]
-                 [offset exact-nonnegative-integer?])]{
-  Position of parser, with line and column information if it's available. 
-  The reported numbers are 1-based.}
-
 @(bibliography
   (bib-entry #:key "parsec"
              #:author "Daan Leijen and Erik Meijer"
