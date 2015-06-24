@@ -2,6 +2,7 @@
 (require (for-syntax syntax/parse))
 (require "../parsack.rkt")
 (require rackunit)
+(require/expose "../parsack.rkt" (format-exp format-pos Pos))
 (provide (all-defined-out))
 
 (define-syntax (check-parse stx)

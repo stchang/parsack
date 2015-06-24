@@ -1,7 +1,33 @@
-#lang racket
-(require "string-helpers.rkt")
-(require (for-syntax syntax/parse racket/syntax))
-(provide (all-defined-out))
+#lang racket/base
+(require racket/port racket/match racket/string racket/format
+         (rename-in (only-in racket string) [string mk-string]))
+(require (for-syntax racket/base syntax/parse racket/syntax))
+(provide (struct-out Consumed)
+         (struct-out Empty)
+         (struct-out Ok)
+         (struct-out Error)
+         err $err (struct-out exn:fail:parsack) parsack-error parse-source
+         return
+         satisfy
+         oneOf
+         noneOf
+         oneOfStrings
+         oneOfStringsAnyCase
+         >>= >> <or> <any>
+         option optionMaybe optional
+         try lookAhead <!> notFollowedBy
+         many many1 skipMany skipMany1 manyTill many1Till manyUntil many1Until
+         sepBy sepBy1 endBy between
+         <?>
+         char charAnyCase $anyChar $letter $digit $alphaNum $hexDigit $identifier
+         $space $spaces $newline $tab
+         string stringAnyCase
+         $eof $eol
+         parse parse-result
+         parser-compose parser-seq parser-cons parser-one
+         choice
+         getState setState withState)
+         
 
 ;;;;;;;;;;;;;;;;;;;;;;;;; Parsec (with error messages) ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; implements monadic combinators for LL parsing
@@ -32,6 +58,11 @@
 ;; - (Error)
 (struct Ok (parsed) #:transparent)
 (struct Error ())
+
+; racket/function
+(define-syntax-rule (thunk e) (λ () e))
+(define (negate f) (λ (x) (not (f x))))
+(define (curry f x) (λ args (apply f x args)))
 
 ;; global parameters ----------------------------------------------------------
 ;; current-unexpected : [Thunk String]
@@ -231,10 +262,11 @@
     (define-values (r c pos) (port-next-location in))
     (define byte-pos (file-position in))
     (match (p in)
-      [(Consumed (Error)) ; dont need to back track if Empty-Error
+      [(Consumed (Error))
        (file-position in byte-pos) ; backtrack
        (set-port-next-location! in r c pos)
-       (Empty (Error))] 
+       (Empty (Error))]
+      ; dont need to back track if Empty-Error
       [other other])))
 
 ;; Parse p and return the result, but don't consume input.
@@ -377,7 +409,7 @@
 (define (chars cs p)
   (if (null? cs)
       (return null)
-      (parser-cons (p (car cs)) (chars (rest cs) p))))
+      (parser-cons (p (car cs)) (chars (cdr cs) p))))
 (define (string str) ;case sensitive
   (string* str char))
 (define (stringAnyCase str) ;case insensitive
@@ -449,7 +481,7 @@
 
 ;; parser compose
 (define-syntax (parser-compose stx)
-  (syntax-case stx (<-)
+  (syntax-parse stx  #:datum-literals (<-)
     [(_ p) #'p]
     [(_ (x <- p) e ...)
      #'(>>= p (λ (x) (parser-compose e ...)))]
