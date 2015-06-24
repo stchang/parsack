@@ -39,10 +39,14 @@
 ;; - if it's not a number, don't consume any input
 (define $p_number
   (λ (in)
-    (define n (read (peeking-input-port in)))
-    (if (number? n)
-        (Consumed (Ok (read in)))
-        (Empty (Error)))))
+    (define-values (r c pos) (port-next-location in))
+    (define byte-pos (file-position in))
+    (define n (read in))
+    (cond
+      [(number? n) (Consumed (Ok n))]
+      [else (file-position in byte-pos) ; backtrack
+            (set-port-next-location! in r c pos)
+            (Empty (Error))])))
 
 (define $p_bool (<or> (>> (string "true") (return #t))
                       (>> (string "false") (return #f))))
