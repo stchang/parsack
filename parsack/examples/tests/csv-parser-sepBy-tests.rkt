@@ -5,7 +5,8 @@
 (require rackunit)
 (require racket/runtime-path)
 
-(define $line (parser-one (~> $cells) $eol)
+(define $line
+  (parser-one (~> $cells) $eol)
   #;(>>= $cells (λ (res) (>> $eol (return res)))))
 (define $remainingCells (<or> (>> (char #\,) $cells)
                              (return null)))
@@ -31,11 +32,11 @@
 (check-parsings ($cells "abc,,ghi") "abc" "" "ghi" "")
 
 (check-parsings ($line "abc,def\nghi") "abc" "def" "ghi")
-(check-partial-parse-error
+(check-parse-error
  ($line "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 
 (check-empty-parsing ($csv "") "")
-(check-partial-parse-error
+(check-parse-error
  ($csv "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "abc,def\nghi,jkl\n") ("abc" "def") ("ghi" "jkl") "")
 
@@ -50,7 +51,7 @@
 
 ;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
-(check-partial-parse-error
+(check-parse-error
  ($csv "hi") (fmt-err-msg 1 3 3 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "hi\n") ("hi") "")
 (check-line-parsings ($csv "line1\nline2\nline3\n") ("line1") ("line2") ("line3") "")

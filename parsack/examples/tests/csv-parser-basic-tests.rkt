@@ -15,6 +15,10 @@
  ((>> (char #\,) $cellContent) "abc") (fmt-err-msg 1 1 1 "a" (list ",")))
 (check-parse-error 
  ((>> (char #\,) $cellContent) "\nabc") (fmt-err-msg 1 1 1 "\n" (list ",")))
+(check-parse-error 
+ ((>> (char #\a) (char #\,)) "abc") (fmt-err-msg 1 2 2 "b" (list ",")))
+(check-parse-error 
+ ((>> (char #\newline) (char #\,)) "\na") (fmt-err-msg 2 1 2 "a" (list ",")))
 (check-parsing ((>> (char #\,) $cellContent) ",abc") "abc" "")
 
 (check-empty-parsing ($remainingCells "abc") "abc")
@@ -26,11 +30,12 @@
 (check-parsings ($cells "abc,,ghi") "abc" "" "ghi" "")
 
 (check-parsings ($line "abc,def\nghi") "abc" "def" "ghi")
-(check-partial-parse-error
+; TODO: merge problem?
+(check-parse-error
  ($line "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 
 (check-empty-parsing ($csv "") "")
-(check-partial-parse-error 
+(check-parse-error 
  ($csv "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "abc,def\nghi,jkl\n") ("abc" "def") ("ghi" "jkl") "")
 
@@ -45,7 +50,7 @@
 
 ;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
-(check-partial-parse-error 
+(check-parse-error 
  ($csv "hi") (fmt-err-msg 1 3 3 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "hi\n") ("hi") "")
 (check-line-parsings ($csv "line1\nline2\nline3\n") ("line1") ("line2") ("line3") "")
@@ -56,5 +61,4 @@
                      ("line1") ("line2") ("line3") ("line4") ("line5") "")
 
 (check-parse-error
- ($csv "line1") (fmt-err-msg 1 6 6 "end of input" (list "," "end-of-line")))
- 
+ ($csv "line1") (fmt-err-msg 1 6 6 "end of input" (list "," "end-of-line"))) 

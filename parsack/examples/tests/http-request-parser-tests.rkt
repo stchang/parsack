@@ -4,13 +4,6 @@
 (require "../http-request-parser.rkt")
 (require rackunit)
 
-(define-syntax (check-parse stx)
-  (syntax-case stx ()
-    [(_ p n)
-     #`(match p
-         [(Consumed! (Ok consumed _ _))
-          #,(syntax/loc #'n (check-equal? consumed n))])]))
-
 ;; examples from: 
 ;; http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
 ;; http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol

@@ -274,10 +274,11 @@
 
    (check-parsed? "\"\\\"\"" (scheme-string "\""))
    #;(check-parse-exn "\"\"\"")
-   (match (force (Consumed-reply (parsack-parse "\"\"\"")))
-     [(Ok consumed (State remaining _ _) _)
-      (check-equal? consumed (scheme-string ""))
-      (check-equal? remaining "\"")]))
+   (let ([in (open-input-string "\"\"\"")])
+     (match (Consumed-reply (parsack-parse in))
+       [(Ok consumed)
+        (check-equal? consumed (scheme-string ""))
+        (check-equal? (port->string in) "\"")])))
 
   (test-case
    "numbers"

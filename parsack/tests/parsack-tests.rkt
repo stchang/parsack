@@ -221,3 +221,18 @@
                                (return x))
                "whatever")
  "val")
+
+;; tests for error msg merging
+(check-parse-error ((<or> (char #\a) (char #\b)) "c")
+                   (fmt-err-msg 1 1 1 "c" (list "a" "b")))
+(check-parse-error ((>> (many (char #\,)) $eol) "a")
+                   (fmt-err-msg 1 1 1 "a" (list "," "end-of-line")))
+(check-parse-error ((parser-seq (many (char #\,)) $eol) "a")
+                   (fmt-err-msg 1 1 1 "a" (list "," "end-of-line")))
+(check-parse-error ((parser-one
+                     (~> (parser-cons (many (noneOf ",\n\r"))
+                                      (<or> (char #\,)
+                                            (return null))))
+                     $eol)
+                    "ab")
+                   (fmt-err-msg 1 3 3 "end of input" (list "," "end-of-line")))
