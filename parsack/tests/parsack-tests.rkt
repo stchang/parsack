@@ -229,6 +229,10 @@
                    (fmt-err-msg 1 1 1 "a" (list "," "end-of-line")))
 (check-parse-error ((parser-seq (many (char #\,)) $eol) "a")
                    (fmt-err-msg 1 1 1 "a" (list "," "end-of-line")))
-#;(check-parse-error ((parser-one (~> (parser-cons (many (noneOf ",\n\r")) (<or> (char #\,)
-                                                                               (return null)))) $eol) "ab")
-                   (fmt-err-msg 1 3 3 "a" (list "," "end-of-line")))
+(check-parse-error ((parser-one
+                     (~> (parser-cons (many (noneOf ",\n\r"))
+                                      (<or> (char #\,)
+                                            (return null))))
+                     $eol)
+                    "ab")
+                   (fmt-err-msg 1 3 3 "end of input" (list "," "end-of-line")))

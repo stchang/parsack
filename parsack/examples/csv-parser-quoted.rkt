@@ -14,14 +14,13 @@
    (~> (many $quotedChar))
    (<?> (char #\") "quote at end of cell"))
   #;(parser-compose
-   (char #\")
-   (content <- (many $quotedChar))
-   (<?> (char #\") "quote at end of cell")
-   (return content)))
+     (char #\")
+     (content <- (many $quotedChar))
+     (<?> (char #\") "quote at end of cell")
+     (return content)))
 
 
 ;; cellContent in csv-parser.rkt
-;(define cell (many (noneOf ",\n")))
 (define $cell (<or> $quotedCell (many (noneOf ",\n\r"))))
 
 ;; a line must end in \n
@@ -30,4 +29,6 @@
 ;; result is list of list of chars
 (define $csv (endBy $line $eol))
 
-(define (csvFile filename) ($csv (with-input-from-file filename port->string)))
+;; csvFile : Path -> String
+(define (csvFile filename)
+  (parse $csv filename))

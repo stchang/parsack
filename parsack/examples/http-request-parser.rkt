@@ -15,7 +15,8 @@
 (define-syntax-rule (http-parser-cons x y)
   (parser-seq x y #:combine-with (compose list->string cons)))
 
-(define $fieldName (http-parser-cons $letter (many $fieldChar))
+(define $fieldName
+  (http-parser-cons $letter (many $fieldChar))
   #;(parser-compose
      (x  <- $letter)
      (xs <- (many $fieldChar))
@@ -43,11 +44,12 @@
      (ys <- (<or> $continuation (return null)))
      (return (list->string (append xs ys)))))
 
-(define $header (parser-cons $fieldName (parser-compose (char #\:) $spaces $contents))
+(define $header
+  (parser-cons $fieldName (parser-compose (char #\:) $spaces $contents))
   #;(parser-compose
-   (x <- $fieldName)
-   (y <- (parser-compose (char #\:) $spaces $contents))
-   (return (cons x y))))
+     (x <- $fieldName)
+     (y <- (parser-compose (char #\:) $spaces $contents))
+     (return (cons x y))))
    
 (define $p_headers (manyTill $header $crlf))
   

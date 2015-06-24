@@ -427,10 +427,8 @@
            (reset!-expected)
            (user-state-reset!)
            (p inp)]
-          [(path? inp)
-           (with-input-from-file inp (curry parse p))]
-          [(string? inp)
-           (with-input-from-string inp (curry parse p))]
+          [(path? inp) (with-input-from-file inp (curry parse p))]
+          [(string? inp) (with-input-from-string inp (curry parse p))]
           [else (raise-user-error 'parse
                  "input not input port, file path, or string file name")]))
   (match res

@@ -14,4 +14,6 @@
 ;; result is list of list of chars
 (define $csv (endBy $line $eol))
 
-(define (csvFile filename) ($csv (with-input-from-file filename port->string)))
+;; csvFile : Path -> String
+(define (csvFile filename)
+  (parse $csv filename))

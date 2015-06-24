@@ -5,7 +5,8 @@
 (require rackunit)
 (require racket/runtime-path)
 
-(define $line (parser-one (~> $cells) $eol)
+(define $line
+  (parser-one (~> $cells) $eol)
   #;(>>= $cells (λ (res) (>> $eol (return res)))))
 (define $remainingCells (<or> (>> (char #\,) $cells)
                              (return null)))

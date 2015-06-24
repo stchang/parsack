@@ -35,7 +35,7 @@
  ($line "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 
 (check-empty-parsing ($csv "") "")
-#;(check-partial-parse-error 
+(check-parse-error 
  ($csv "abc") (fmt-err-msg 1 4 4 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "abc,def\nghi,jkl\n") ("abc" "def") ("ghi" "jkl") "")
 
@@ -50,7 +50,7 @@
 
 ;; all Real World Haskell tests
 (check-empty-parsing ($csv "") "")
-#;(check-partial-parse-error 
+(check-parse-error 
  ($csv "hi") (fmt-err-msg 1 3 3 "end of input" (list "," "end-of-line")))
 (check-line-parsings ($csv "hi\n") ("hi") "")
 (check-line-parsings ($csv "line1\nline2\nline3\n") ("line1") ("line2") ("line3") "")
@@ -60,5 +60,5 @@
 (check-line-parsings ($csv "line1\r\nline2\nline3\n\rline4\rline5\n")
                      ("line1") ("line2") ("line3") ("line4") ("line5") "")
 
-#;(check-parse-error
+(check-parse-error
  ($csv "line1") (fmt-err-msg 1 6 6 "end of input" (list "," "end-of-line"))) 

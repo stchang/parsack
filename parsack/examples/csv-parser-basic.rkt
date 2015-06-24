@@ -12,21 +12,24 @@
   (<or> (>>= (char #\,) (λ _ $cells))
         (return null)))
 
-(define $cells (parser-cons $cellContent $remainingCells)
+(define $cells
+  (parser-cons $cellContent $remainingCells)
   #;(parser-compose (x  <- $cellContent )
-                  (xs <- $remainingCells)
-                  (return (cons x xs))))
+                    (xs <- $remainingCells)
+                    (return (cons x xs))))
 
 ;; a line must end in \n
-(define $line (parser-one (~> $cells) $eol) ; deliberately not using endBy
+(define $line
+  (parser-one (~> $cells) $eol) ; deliberately not using endBy
   #;(parser-compose (res <- $cells) $eol (return res)))
 
 ;; result is list of list of chars
 
-(define $csv (parser-one (~> (many $line)) $eof)
-;  (>>= (many1 line) (λ (result) (>>= (char #\null) (λ _ (return result))))))
+(define $csv
+  (parser-one (~> (many $line)) $eof)
+  #;(>>= (many1 line) (λ (result) (>>= (char #\null) (λ _ (return result)))))
   #;(parser-compose (res <- (many $line)) $eof (return res)))
 
-
+;; csvFile : Path -> Parse Result
 (define (csvFile filename)
-  (parse $csv filename #;(with-input-from-file filename port->string)))
+  (parse $csv filename))
