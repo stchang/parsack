@@ -1,0 +1,11 @@
+Parsack revision history
+
+0.4:
+- parse with ports instead of string inputs
+  - order of magnitude performance improvement
+- switch to racket/base
+- add explicit provides
+- remove `State` and `Msg` structs
+- user-state, expected, and unexpected parameters are global variables
+- remove laziness
+  - not needed since the code is largely imperative now
