@@ -1,7 +1,7 @@
 #lang scribble/manual
 @(require scribble/eval
           scribble/base
-          (for-label parsack
+         (for-label parsack
                      racket/contract/base
                      (rename-in racket/base [string mk-string])))
 
@@ -391,7 +391,7 @@ This library uses the $ prefix for identifiers that represent parsers (as oppose
 @;; ---------------------------------------------------------------------------
 @section[#:tag "parse-structs"]{Parse Result Structs}
 
-A @deftech{parser} is a function that consumes an @racket[input-port?] and
+A @tech{parser} is a function that consumes an @racket[input-port?] and
 returns either a @racket[Consumed], or an @racket[Empty] struct.
 
 In general, users should use the above combinators to connect parsers and parse results, rather than manipulate these structs directly.
@@ -428,6 +428,8 @@ In general, users should use the above combinators to connect parsers and parse 
   ($letter (open-input-string "123"))
   ]}
 
+@defstruct*[(exn:fail:parsack exn:fail) ()]{
+@racket[parse-result] and @racket[parse] throw this exception on parse failure.}
                                 
 @(bibliography
   (bib-entry #:key "parsec"
