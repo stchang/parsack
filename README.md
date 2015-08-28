@@ -3,7 +3,7 @@ parsack
 
 A basic Parsec-like monadic parser combinator library implementation in Racket.
 
-[documentation](http://stchang.github.io/parsack/parsack.html)
+[documentation](http://pkg-build.racket-lang.org/doc/parsack/index.html)
 
 ---
 
