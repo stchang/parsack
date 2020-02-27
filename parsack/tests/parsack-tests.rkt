@@ -222,6 +222,35 @@
                "whatever")
  "val")
 
+
+;; Check for thread safety, such that each thread has its own state.
+;; The main thread and subthread schedule each other's activity
+;; such that the main thread will try to destroy the subthread's
+;; state with a new parse.
+(define $setCount
+  (parser-compose (existing <- (getState 'count))
+                  (setState 'count (add1 (or existing 0)))
+                  (getState 'count)))
+
+(define main-thread (current-thread))
+
+(define sub-thread
+  (thread (λ ()
+            (parse
+             (parser-compose (val <- $setCount)
+                             (λ (in)
+                               (thread-send main-thread val)
+                               (thread-receive)
+                               ($setCount in))
+                             (next <- $setCount)
+                             (return (thread-send main-thread next)))
+             ""))))
+
+(check-equal? (thread-receive) 1) ; resume when subthread has state
+(check-equal? (parse-result $setCount "") 1) ; try to destroy it
+(thread-send sub-thread 'continue) ; let subthread finish
+(check-equal? (thread-receive) 3) ; confirm that subthread was undisturbed.
+
 ;; tests for error msg merging
 (check-parse-error ((<or> (char #\a) (char #\b)) "c")
                    (fmt-err-msg 1 1 1 "c" (list "a" "b")))
