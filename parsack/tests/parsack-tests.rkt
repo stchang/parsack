@@ -247,7 +247,7 @@
              ""))))
 
 (check-equal? (thread-receive) 1) ; resume when subthread has state
-(check-equal? (parse-result $setCount "") 1) ; try to destroy it
+(check-equal? (parse-result $setCount "") 1) ; implied (user-state-reset!)
 (thread-send sub-thread 'continue) ; let subthread finish
 (check-equal? (thread-receive) 3) ; confirm that subthread was undisturbed.
 
