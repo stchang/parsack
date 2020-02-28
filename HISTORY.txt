@@ -9,3 +9,6 @@ Parsack revision history
 - user-state, expected, and unexpected parameters are global variables
 - remove laziness
   - not needed since the code is largely imperative now
+
+0.5:
+- Use thread cells for global state
