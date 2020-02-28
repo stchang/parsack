@@ -68,25 +68,25 @@
 ;; global parameters ----------------------------------------------------------
 ;; current-unexpected : [Thunk String]
 ;; The current unexpected char.
-(define current-unexpected "")
-(define (reset!-unexpected) (set! current-unexpected ""))
-(define (get-unexpected) current-unexpected)
-(define (set!-unexpected str) (set! current-unexpected str))
+(define current-unexpected (make-thread-cell ""))
+(define (reset!-unexpected) (thread-cell-set! current-unexpected ""))
+(define (get-unexpected) (thread-cell-ref current-unexpected))
+(define (set!-unexpected str) (thread-cell-set! current-unexpected str))
 ; current-expected : [List [Thunk String]]
 ;; The current expected chars.
-(define current-expected null)
-(define (reset!-expected) (set! current-expected null))
-(define (get-expected) current-expected)
-(define (set!-expected exps) (set! current-expected exps))
+(define current-expected (make-thread-cell null))
+(define (reset!-expected) (thread-cell-set! current-expected null))
+(define (get-expected) (thread-cell-ref current-expected))
+(define (set!-expected exps) (thread-cell-set! current-expected exps))
 (define (merge!-expected exps1 exps2) (set!-expected (append exps1 exps2)))
-(define (cons!-expected exp) (set!-expected (cons exp current-expected)))
-(define (append!-expected exps) (set!-expected (append exps current-expected)))
+(define (cons!-expected exp) (set!-expected (cons exp (get-expected))))
+(define (append!-expected exps) (set!-expected (append exps (get-expected))))
 ;; user-state [MutHashEq Sym => X]
 ;; state customizable by the user
-(define user-state (make-hasheq))
-(define (user-state-reset!) (set! user-state (make-hasheq)))
-(define (user-state-get key) (hash-ref user-state key #f))
-(define (user-state-set! key val) (hash-set! user-state key val))
+(define user-state (make-thread-cell (make-hasheq)))
+(define (user-state-reset!) (thread-cell-set! user-state (make-hasheq)))
+(define (user-state-get key) (hash-ref (thread-cell-ref user-state) key #f))
+(define (user-state-set! key val) (hash-set! (thread-cell-ref user-state) key val))
 
 ;; errors ---------------------------------------------------------------------
 (define (err expected)
