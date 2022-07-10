@@ -1,7 +1,7 @@
 #lang racket
-(require "../parsack.rkt")
-(require "test-utils.rkt")
-(require rackunit)
+(require parsack
+         "test-utils.rkt"
+         rackunit)
 
 ;; parse-error: at pos 0
 ;; unexpected @: expected letter, digit or _

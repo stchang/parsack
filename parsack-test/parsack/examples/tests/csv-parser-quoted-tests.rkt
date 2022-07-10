@@ -1,9 +1,10 @@
 #lang racket
-(require "../../parsack.rkt")
-(require "../../tests/test-utils.rkt")
-(require (rename-in "../csv-parser-quoted.rkt" [$cell $cellContent] [$line $cells]))
-(require rackunit)
-(require racket/runtime-path)
+(require parsack
+         tests/parsack/test-utils
+         (rename-in parsack/examples/csv-parser-quoted
+                    [$cell $cellContent] [$line $cells])
+         rackunit
+         racket/runtime-path)
 
 (define $line
   (parser-one (~> $cells) $eol)

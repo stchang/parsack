@@ -1,7 +1,7 @@
 #lang racket
-(require "../parsack.rkt")
-(require "../examples/json-parser.rkt")
-(require rackunit)
+(require parsack
+         parsack/examples/json-parser
+         rackunit)
 
 (check-equal? (parse-result $eof "") null)
 (check-equal? (parse-result $letter "A") #\A)

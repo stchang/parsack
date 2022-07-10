@@ -1,9 +1,9 @@
 #lang racket
-(require "../../parsack.rkt")
-(require "../../tests/test-utils.rkt")
-(require "../url-query-parser.rkt")
-(require rackunit)
-(require (for-syntax syntax/parse))
+(require parsack
+         tests/parsack/test-utils
+         parsack/examples/url-query-parser
+         rackunit
+         (for-syntax syntax/parse))
 
 (define-syntax (check-query-parse stx)
   (syntax-parse stx
