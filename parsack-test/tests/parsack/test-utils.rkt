@@ -1,8 +1,8 @@
 #lang racket
 (require (for-syntax syntax/parse))
-(require "../parsack.rkt")
+(require parsack)
 (require rackunit)
-(require/expose "../parsack.rkt" (format-exp format-pos Pos))
+(require/expose parsack/parsack (format-exp format-pos Pos))
 (provide (all-defined-out))
 
 (define-syntax (check-parse stx)

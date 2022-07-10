@@ -1,9 +1,8 @@
 #lang racket
-(require "../../parsack.rkt")
-(require "../../tests/test-utils.rkt")
-(require "../json-parser.rkt")
-(require rackunit)
-
+(require parsack
+         tests/parsack/test-utils
+         parsack/examples/json-parser
+         rackunit)
 
 (check-parse (parse $p_number "-3.14") -3.14)
 (check-parse (parse $p_bool "true") #t)

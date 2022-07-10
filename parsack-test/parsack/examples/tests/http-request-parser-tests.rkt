@@ -1,8 +1,8 @@
 #lang racket
-(require "../../parsack.rkt")
-(require "../../tests/test-utils.rkt")
-(require "../http-request-parser.rkt")
-(require rackunit)
+(require parsack
+         tests/parsack/test-utils
+         parsack/examples/http-request-parser
+         rackunit)
 
 ;; examples from: 
 ;; http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html

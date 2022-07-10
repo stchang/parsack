@@ -1,5 +1,5 @@
 #lang racket
-(require "../parsack.rkt")
+(require parsack)
 (provide (all-defined-out))
 
 ;; A Method is either 'get or 'post

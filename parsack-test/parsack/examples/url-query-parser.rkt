@@ -1,5 +1,5 @@
 #lang racket
-(require "../parsack.rkt")
+(require parsack)
 (provide (all-defined-out))
 
 (define ASCII-ZERO (char->integer #\0))
