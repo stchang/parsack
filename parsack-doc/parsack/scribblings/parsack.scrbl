@@ -1,7 +1,7 @@
 #lang scribble/manual
 @(require scribble/eval
           scribble/base
-         (for-label parsack
+          (for-label parsack
                      racket/contract/base
                      (rename-in racket/base [string mk-string])))
 
@@ -306,6 +306,25 @@ A CSV string is a series of lines.
   Like @racket[sepBy] except for an extra @racket[end] at the end.}
 @defproc[(between [open parser?][close parser?][p parser?]) parser?]{
   Creates a parser that parses with @racket[p] only if it's surround by @racket[open] and @racket[close]. Only the result of @racket[p] is returned.}
+
+@defproc[(option [x any/c] [p parser?]) parser?]{
+  Creates a parser that tries to parse with @racket[p], returning @racket[x] if it fails without consuming input.
+
+  @examples[#:eval the-eval
+  (parse-result (option 0 (string "ab")) "ab")
+  (parse-result (option 0 (string "ab")) "b")
+  (parse-result (option 0 (string "ab")) "a")]}
+
+@defproc[(optionMaybe [p parser?]) parser?]{
+  Same as @racket[(option #f p)].}
+@defproc[(optional [p parser?]) parser?]{
+  Creates a parser that returns nothing if @racket[p] succeeds or consumes no input. It will fail if @racket[p] fails after consuming input.
+  
+  @examples[#:eval the-eval
+  (parse-result (optional $letter) "a")
+  (parse-result (optional $letter) "1")
+  (parse-result (optional (string "ab")) "a")]}
+
 @defproc[(lookAhead [p parser?]) parser?]{
   Creates a parser that parses with @racket[p] and returns its result, but consumes no input.}
 @defproc[(<!> [p parser?] [q parser? $anyChar]) parser?]{
@@ -332,7 +351,9 @@ A CSV string is a series of lines.
 @defproc[(oneOfStringsAnyCase [str string?] ...) parser?]{
   Creates a parser that consumes and returns any of the @racket[str]s, case-insensitive. Note that the parse result is @racket[(listof char?)] not @racket[string?].}
 @defproc[(string [str string?]) parser?]{
-  Creates a parser that parses and returns @racket[str] as a list of chars.}
+  Creates a parser that parses and returns @racket[str] (case-sensitive) as a list of chars.}
+@defproc[(stringAnyCase [str string?]) parser?]{
+  Creates a parser that parses and returns @racket[str] (case-insensitive) as a list of chars.}
 
 @section{Constant parsers}
 This library uses the $ prefix for identifiers that represent parsers (as opposed to combinators).
